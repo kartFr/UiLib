@@ -210,7 +210,7 @@ function SectionElement:CreateToggle(name, callback)
     toggleGui.ImageButton.MouseButton1Down:Connect(function()
         toggleTable.boolean = not toggleTable.boolean
         setToggleColor(toggleGui, toggleTable.boolean)
-        callback(toggleTable.boolean, self.sliderValue)
+        callback(toggleTable.boolean, toggleTable.sliderValue)
     end)
 
     return setmetatable(toggleTable, ToggleElement)
