@@ -4,7 +4,6 @@ UiLibrary.__index = UiLibrary
 local ContextActionService = game:GetService('ContextActionService')
 local UserInputService = game:GetService('UserInputService')
 
-local binds = {}
 local secondaryBinds = {
     [Enum.KeyCode.LeftControl.Name] = 'LCtrl',
     [Enum.KeyCode.LeftAlt.Name] = 'LAlt',
@@ -230,7 +229,7 @@ local function setupBind(self)
 
     local secondaryInputDown
 
-    binds[self.toggleGui][#binds[self.toggleGui] + 1] = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
+    self.bindConnections[#self.bindConnections + 1] = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
         if not gameProccessed then
            if self.secondaryInput then
                 if inputObject.KeyCode.Name == self.secondaryInput then
@@ -253,7 +252,7 @@ local function setupBind(self)
     end)
 
     if self.secondaryInput then
-        binds[self.toggleGui][#binds[self.toggleGui] + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
+        self.bindConnections[#self.bindConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
             if not gameProccessed then
                 if inputObject.KeyCode.Name == self.secondaryInput then
                     secondaryInputDown = false
@@ -264,8 +263,57 @@ local function setupBind(self)
 end
 
 function ToggleElement:AddKeybind(bindsToSet, callback)
-    local bindset = false
+    self.keybindGui = self.assets.KeyBind:Clone()
+    self.keybindGui.Parent = self.toggleGui
     self.bindCallback = callback
+    self.bindConnections = {}
+
+    self.keybindGui.Button.MouseButton1Down:Connect(function()
+        if #self.bindConnections >= 1 then
+            for i,v in pairs(self.bindConnections) do
+                v:Disconnect()
+                self.bindConnections[i] = nil
+            end
+        end
+
+        self.keybindGui.Button.Text = '...'
+        self.secondaryInput = nil
+        self.primaryInput = nil
+        local getInputs
+        
+        getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
+            if not gameProccessed then
+                if secondaryBinds[inputObject.KeyCode.Name] then
+                    self.secondaryInput  = inputObject.KeyCode.Name
+                    self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
+                elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
+                    self.primaryInput = inputObject.KeyCode.Name
+                    self.primaryInput = self.primaryInput
+                end
+
+                if self.primaryInput then
+                    getInputs:Disconnect()
+                    self.bindCallback({self.secondaryInput, self.primaryInput})
+                    setupBind(self)
+                end
+            end
+        end)
+    end)
+
+    self.keybindGui.Button.MouseButton2Down:Connect(function()
+        self.keybindGui.Button.Text = 'NONE'
+        self.secondaryInput = nil
+        self.primaryInput = nil
+
+        self.bindCallback()
+
+        if #self.bindConnections >= 1 then
+            for i,v in pairs(self.bindConnections) do
+                v:Disconnect()
+                self.bindConnections[i] = nil
+            end
+        end
+    end)
 
     if bindsToSet then
         if #bindsToSet >= 2 then
@@ -282,65 +330,10 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
             if self.secondaryInput and not self.primaryInput then
                 self.secondaryInput = nil
             else
-                bindset = true
                 self.bindCallback({self.secondaryInput, self.primaryInput})
                 setupBind(self)
             end
         end
-    end
-
-    if not bindset then
-        self.keybindGui = self.assets.KeyBind:Clone()
-        self.keybindGui.Parent = self.toggleGui
-
-        self.keybindGui.Button.MouseButton1Down:Connect(function()
-            if binds[self.toggleGui] then
-                for i,v in pairs(binds[self.toggleGui]) do
-                    v:Disconnect()
-                end
-                binds[self.toggleGui] = {}
-            end
-
-            self.keybindGui.Button.Text = '...'
-            self.secondaryInput = nil
-            self.primaryInput = nil
-            local getInputs
-            binds[self.toggleGui] = {}
-            
-            getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
-                if not gameProccessed then
-                    if secondaryBinds[inputObject.KeyCode.Name] then
-                        self.secondaryInput  = inputObject.KeyCode.Name
-                        self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
-                    elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
-                        self.primaryInput = inputObject.KeyCode.Name
-                        self.primaryInput = self.primaryInput
-                    end
-
-                    if self.primaryInput then
-                        getInputs:Disconnect()
-                        self.bindCallback({self.secondaryInput, self.primaryInput})
-                        setupBind(self)
-                    end
-                end
-            end)
-        end)
-
-        self.keybindGui.Button.MouseButton2Down:Connect(function()
-            self.keybindGui.Button.Text = 'NONE'
-            self.secondaryInput = nil
-            self.primaryInput = nil
-
-            self.bindCallback()
-
-            if binds[self.toggleGui] then
-                for i,v in pairs(binds[self.toggleGui]) do
-                    v:Disconnect()
-                end
-
-                binds[self.toggleGui] = {}
-            end
-        end)
     end
 
     return self
@@ -348,12 +341,11 @@ end
 
 function ToggleElement:SetKeybind(bindsToSet)
     if #bindsToSet >= 2 then
-        if binds[self.toggleGui] then
-            for i,v in pairs(binds[self.toggleGui]) do
+        if #self.bindConnections >= 1 then
+            for i,v in pairs(self.bindConnections) do
                 v:Disconnect()
+                self.bindConnections[i] = nil
             end
-
-            binds[self.toggleGui] = {}
         end
 
         self.secondaryInput = nil
