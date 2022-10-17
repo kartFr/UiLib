@@ -265,6 +265,8 @@ end
 
 function ToggleElement:AddKeybind(binds, callback)
     local bindset = false
+    self.bindCallback = callback
+
     if binds then
         if #binds >= 2 then
             for i,v in pairs(binds) do
@@ -281,6 +283,7 @@ function ToggleElement:AddKeybind(binds, callback)
                 self.secondaryInput = nil
             else
                 bindset = true
+                self.bindCallback({self.secondaryInput, self.primaryInput})
                 setupBind(self)
             end
         end
@@ -316,7 +319,7 @@ function ToggleElement:AddKeybind(binds, callback)
 
                     if self.primaryInput then
                         getInputs:Disconnect()
-                        callback({self.secondaryInput, self.primaryInput})
+                        self.bindCallback({self.secondaryInput, self.primaryInput})
                         setupBind(self)
                     end
                 end
@@ -327,6 +330,8 @@ function ToggleElement:AddKeybind(binds, callback)
             self.keybindGui.Button.Text = 'NONE'
             self.secondaryInput = nil
             self.primaryInput = nil
+
+            self.bindCallback()
 
             if binds[self.toggleGui] then
                 for i,v in pairs(binds[self.toggleGui]) do
@@ -368,6 +373,7 @@ function ToggleElement:SetKeybind(binds)
             self.secondaryInput = nil
             return
         else
+            self.bindCallback({self.secondaryInput, self.primaryInput})
             setupBind(self)
         end
     end
