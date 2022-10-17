@@ -263,7 +263,7 @@ local function setupBind(self)
     end
 end
 
-function ToggleElement:AddKeybind(binds)
+function ToggleElement:AddKeybind(binds, callback)
     local bindset = false
     if binds then
         if #binds >= 2 then
@@ -316,6 +316,7 @@ function ToggleElement:AddKeybind(binds)
 
                     if self.primaryInput then
                         getInputs:Disconnect()
+                        callback({self.secondaryInput, self.primaryInput})
                         setupBind(self)
                     end
                 end
@@ -346,7 +347,7 @@ function ToggleElement:SetKeybind(binds)
             for i,v in pairs(binds[self.toggleGui]) do
                 v:Disconnect()
             end
-            
+
             binds[self.toggleGui] = {}
         end
 
