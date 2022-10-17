@@ -263,54 +263,80 @@ local function setupBind(self)
     end
 end
 
-function ToggleElement:AddKeybind()
-    self.keybindGui = self.assets.KeyBind:Clone()
-    self.keybindGui.Parent = self.toggleGui
+function ToggleElement:AddKeybind(binds)
+    local bindset = false
+    if binds then
+        if #binds >= 2 then
+            for i,v in pairs(binds) do
+                if secondaryBinds[v] then
+                    self.secondaryInput = v
+                end
 
-    self.keybindGui.Button.MouseButton1Down:Connect(function()
-        if binds[self.toggleGui] then
-            for i,v in pairs(binds[self.toggleGui]) do
-                v:Disconnect()
+                if not table.find(bindBlacklist, v) then
+                    self.primaryInput = v
+                end
             end
-            binds[self.toggleGui] = {}
+
+            if self.secondaryInput and not self.primaryInput then
+                self.secondaryInput = nil
+            else
+                bindset = true
+                setupBind(self)
+            end
         end
+    end
 
-        self.keybindGui.Button.Text = '...'
-        self.secondaryInput = nil
-        self.primaryInput = nil
-        local getInputs
-        binds[self.toggleGui] = {}
-        
-        getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
-            if not gameProccessed then
-                if secondaryBinds[inputObject.KeyCode.Name] then
-                    self.secondaryInput  = inputObject.KeyCode.Name
-                    self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
-                elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
-                    self.primaryInput = inputObject.KeyCode.Name
-                    self.primaryInput = self.primaryInput
+    if not bindset then
+        self.keybindGui = self.assets.KeyBind:Clone()
+        self.keybindGui.Parent = self.toggleGui
+
+        self.keybindGui.Button.MouseButton1Down:Connect(function()
+            if binds[self.toggleGui] then
+                for i,v in pairs(binds[self.toggleGui]) do
+                    v:Disconnect()
+                end
+                binds[self.toggleGui] = {}
+            end
+
+            self.keybindGui.Button.Text = '...'
+            self.secondaryInput = nil
+            self.primaryInput = nil
+            local getInputs
+            binds[self.toggleGui] = {}
+            
+            getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
+                if not gameProccessed then
+                    if secondaryBinds[inputObject.KeyCode.Name] then
+                        self.secondaryInput  = inputObject.KeyCode.Name
+                        self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
+                    elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
+                        self.primaryInput = inputObject.KeyCode.Name
+                        self.primaryInput = self.primaryInput
+                    end
+
+                    if self.primaryInput then
+                        getInputs:Disconnect()
+                        setupBind(self)
+                    end
+                end
+            end)
+        end)
+
+        self.keybindGui.Button.MouseButton2Down:Connect(function()
+            self.keybindGui.Button.Text = 'NONE'
+            self.secondaryInput = nil
+            self.primaryInput = nil
+
+            if binds[self.toggleGui] then
+                for i,v in pairs(binds[self.toggleGui]) do
+                    v:Disconnect()
                 end
 
-                if self.primaryInput then
-                    getInputs:Disconnect()
-                    setupBind(self)
-                end
+                binds[self.toggleGui] = {}
             end
         end)
-    end)
+    end
 
-    self.keybindGui.Button.MouseButton2Down:Connect(function()
-        self.keybindGui.Button.Text = 'NONE'
-        self.secondaryInput = nil
-        self.primaryInput = nil
-
-        if binds[self.toggleGui] then
-            for i,v in pairs(binds[self.toggleGui]) do
-                v:Disconnect()
-            end
-            binds[self.toggleGui] = {}
-        end
-    end)
     return self
 end
 
@@ -320,6 +346,7 @@ function ToggleElement:SetKeybind(binds)
             for i,v in pairs(binds[self.toggleGui]) do
                 v:Disconnect()
             end
+            
             binds[self.toggleGui] = {}
         end
 
@@ -330,17 +357,23 @@ function ToggleElement:SetKeybind(binds)
             if secondaryBinds[v] then
                 self.secondaryInput = v
             end
-            if table.find(bindBlacklist, v) then
+
+            if not table.find(bindBlacklist, v) then
                 self.primaryInput = v
             end
         end
 
         if self.secondaryInput and not self.primaryInput then
+            self.secondaryInput = nil
             return
         else
             setupBind(self)
         end
     end
+end
+
+function ToggleElement:GetKeybind()
+    return {self.secondaryInput, self.primaryInput}
 end
 
 function ToggleElement:AddSlider(default, minMax)
