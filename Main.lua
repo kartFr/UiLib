@@ -288,9 +288,9 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
                     self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
                 elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
                     self.primaryInput = inputObject.KeyCode.Name
-                    self.primaryInput = self.primaryInput
                 end
 
+             
                 if self.primaryInput then
                     getInputs:Disconnect()
                     self.bindCallback({self.secondaryInput, self.primaryInput})
@@ -301,7 +301,7 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
     end)
 
     self.keybindGui.Button.MouseButton2Down:Connect(function()
-        self.keybindGui.Button.Text = 'NONE'
+        self.keybindGui.Button.Text = 'None'
         self.secondaryInput = nil
         self.primaryInput = nil
 
@@ -315,24 +315,21 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
         end
     end)
 
-    if bindsToSet then
-        if #bindsToSet >= 2 then
-            for i,v in pairs(bindsToSet) do
-                if secondaryBinds[v] then
-                    self.secondaryInput = v
-                end
-
-                if not table.find(bindBlacklist, v) then
-                    self.primaryInput = v
-                end
+    if bindsToSet and typeof(bindsToSet) == 'table' then
+        for i,v in pairs(bindsToSet) do
+            if secondaryBinds[v] then
+                self.secondaryInput = v
             end
 
-            if self.secondaryInput and not self.primaryInput then
-                self.secondaryInput = nil
-            else
-                self.bindCallback({self.secondaryInput, self.primaryInput})
-                setupBind(self)
+            if not table.find(bindBlacklist, v) then
+                self.primaryInput = v
             end
+        end
+
+        if self.secondaryInput and not self.primaryInput then
+            self.secondaryInput = nil
+        else
+            setupBind(self)
         end
     end
 
@@ -340,7 +337,7 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
 end
 
 function ToggleElement:SetKeybind(bindsToSet)
-    if #bindsToSet >= 2 then
+    if bindsToSet and typeof(bindsToSet) == 'table' then
         if #self.bindConnections >= 1 then
             for i,v in pairs(self.bindConnections) do
                 v:Disconnect()
