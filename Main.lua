@@ -32,7 +32,7 @@ Gui.__index = Gui
 function UiLibrary.new(name)
     local assets = game:GetObjects('rbxassetid://11260223308')[1]
     local mainGui = assets.ScreenGui:Clone()
-    local hiding = false
+    local hiding = true
     local dragConnections = {}
 
     if syn then
