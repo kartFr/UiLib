@@ -263,13 +263,13 @@ local function setupBind(self)
     end
 end
 
-function ToggleElement:AddKeybind(binds, callback)
+function ToggleElement:AddKeybind(bindsToSet, callback)
     local bindset = false
     self.bindCallback = callback
 
-    if binds then
-        if #binds >= 2 then
-            for i,v in pairs(binds) do
+    if bindsToSet then
+        if #bindsToSet >= 2 then
+            for i,v in pairs(bindsToSet) do
                 if secondaryBinds[v] then
                     self.secondaryInput = v
                 end
@@ -346,8 +346,8 @@ function ToggleElement:AddKeybind(binds, callback)
     return self
 end
 
-function ToggleElement:SetKeybind(binds)
-    if #binds >= 2 then
+function ToggleElement:SetKeybind(bindsToSet)
+    if #bindsToSet >= 2 then
         if binds[self.toggleGui] then
             for i,v in pairs(binds[self.toggleGui]) do
                 v:Disconnect()
@@ -359,7 +359,7 @@ function ToggleElement:SetKeybind(binds)
         self.secondaryInput = nil
         self.primaryInput = nil
 
-        for i,v in pairs(binds) do
+        for i,v in pairs(bindsToSet) do
             if secondaryBinds[v] then
                 self.secondaryInput = v
             end
