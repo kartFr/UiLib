@@ -391,8 +391,8 @@ function ToggleElement:AddSlider(default, minMax)
             sliderConnections[i] = nil
         end
 
-        self.sliderGui.Frame.Size = UDim2.new((X - self.sliderGui.Frame.AbsolutePosition.X) / self.sliderGui.TextLabel.AbsoluteSize.X, 0, 1, 0)
         self.sliderValue = math.round((X - self.sliderGui.Frame.AbsolutePosition.x) / self.sliderGui.TextLabel.AbsoluteSize.X * (self.minMax[2] - self.minMax[1]) + self.minMax[1])
+        self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
         self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
         self.callback(self.boolean, self.sliderValue)
         sliderConnections[#sliderConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProccessed)
@@ -400,9 +400,9 @@ function ToggleElement:AddSlider(default, minMax)
                 local precentage = math.clamp((inputObject.Position.X - self.sliderGui.Frame.AbsolutePosition.X) / self.sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
                 local previousSliderValue = self.sliderValue
                 self.sliderValue = math.round(precentage * (self.minMax[2] - self.minMax[1]) + self.minMax[1])
-
+        
                 if previousSliderValue ~= self.sliderValue then
-                    self.sliderGui.Frame.Size = UDim2.new(precentage, 0, 1, 0)
+                    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
                     self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
                     self.callback(self.boolean, self.sliderValue)
                 end
@@ -463,8 +463,8 @@ function SectionElement:CreateSlider(name, default, minMax, callback)
             sliderConnections[i] = nil
         end
 
-        slider.sliderGui.Slider.Frame.Size = UDim2.new((X - slider.sliderGui.Slider.Frame.AbsolutePosition.X) / slider.sliderGui.TextLabel.AbsoluteSize.X, 0, 1, 0)
         slider.sliderValue = math.round((X - slider.sliderGui.Slider.Frame.AbsolutePosition.x) / slider.sliderGui.TextLabel.AbsoluteSize.X * (slider.minMax[2] - slider.minMax[1]) + slider.minMax[1])
+        slider.sliderGui.Slider.Frame.Size = UDim2.new((slider.sliderValue - slider.minMax[1]) / (slider.minMax[2] - slider.minMax[1]), 0, 1, 0)
         slider.sliderGui.Slider.TextLabel.Text = slider.sliderValue..' / '..slider.minMax[2]
         slider.callback(slider.boolean, slider.sliderValue)
         sliderConnections[1] = UserInputService.InputChanged:Connect(function(inputObject, gameProccessed)
@@ -472,9 +472,11 @@ function SectionElement:CreateSlider(name, default, minMax, callback)
                 local precentage = math.clamp((inputObject.Position.X - slider.sliderGui.Slider.Frame.AbsolutePosition.X) / slider.sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
                 local previousSliderValue = slider.sliderValue
                 slider.sliderValue = math.round(precentage * (slider.minMax[2] - slider.minMax[1]) + slider.minMax[1])
+                
+                
 
                 if previousSliderValue ~= slider.sliderValue then
-                    slider.sliderGui.Slider.Frame.Size = UDim2.new(precentage, 0, 1, 0)
+                    slider.sliderGui.Slider.Frame.Size = UDim2.new((slider.sliderValue - slider.minMax[1]) / (slider.minMax[2] - slider.minMax[1]), 0, 1, 0)
                     slider.sliderGui.Slider.TextLabel.Text = slider.sliderValue..' / '..slider.minMax[2]
                     slider.callback(slider.sliderValue)
                 end
