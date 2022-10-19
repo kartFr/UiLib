@@ -218,6 +218,7 @@ end
 function ToggleElement:SetToggle(boolean)
     self.boolean = not boolean
     setToggleColor(self.toggleGui, self.boolean)
+    self.callback(self.boolean, self.value)
 end
 
 local function setupBind(self)
