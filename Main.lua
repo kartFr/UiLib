@@ -216,7 +216,7 @@ function SectionElement:CreateToggle(name, callback)
 end
 
 function ToggleElement:SetToggle(boolean)
-    self.boolean = not boolean
+    self.boolean = boolean
     setToggleColor(self.toggleGui, self.boolean)
     self.callback(self.boolean, self.value)
 end
