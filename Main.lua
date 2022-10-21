@@ -208,7 +208,6 @@ function SectionElement:CreateToggle(elements)
     }
 
     if toggleTable.boolean ~= false then
-        elements.callback(self.boolean)
         setToggleColor(toggleTable.toggleGui, toggleTable.boolean)
     end
 
