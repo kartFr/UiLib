@@ -352,11 +352,11 @@ function ToggleElement:AddKeybind(elements)
                 self.secondaryInput = v
             end
 
-            if not table.find(bindBlacklist, v) then
+            if not table.find(bindBlacklist, v) and not secondaryBinds[v] then
                 self.primaryInput = v
             end
         end
-
+        
         if self.secondaryInput and not self.primaryInput then
             self.secondaryInput = nil
         else
@@ -385,7 +385,7 @@ function ToggleElement:SetBind(bindsToSet)
                     self.secondaryInput = v
                 end
     
-                if not table.find(bindBlacklist, v) then
+                if not table.find(bindBlacklist, v) and not secondaryBinds[v] then
                     self.primaryInput = v
                 end
             end
