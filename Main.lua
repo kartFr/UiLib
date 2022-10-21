@@ -10,6 +10,7 @@ local secondaryBinds = {
     [Enum.KeyCode.RightAlt.Name] = 'RAlt',
     [Enum.KeyCode.Tab.Name] = 'Tab'
 }
+
 local bindBlacklist = {
     Enum.KeyCode.Slash.Name,
     Enum.KeyCode.W.Name,
@@ -190,18 +191,28 @@ local function setToggleColor(toggleGui, boolean)
     end
 end
 
-function SectionElement:CreateToggle(name, callback)
+function SectionElement:CreateToggle(settings)
+    --[[
+        Settings:
+        name = string
+        callback = function
+        default = boolean?
+    ]]--
     local toggleGui = self.assets.Toggle:Clone()
     local toggleTable = {
-        boolean = false,
+        boolean = settings.default or false,
         toggleGui = toggleGui,
-        callback = callback,
+        callback = settings.callback,
         assets = self.assets,
         section = self.section,
         scrollingFrame = self.scrollingFrame
     }
 
-    toggleGui.TextLabel.Text = name
+    if toggleTable.boolean ~= false then
+        setToggleColor(toggleTable.toggleGui, toggleTable.boolean)
+    end
+
+    toggleGui.TextLabel.Text = settings.name
     toggleGui.Parent = self.section.Frame.Holder
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
@@ -209,16 +220,26 @@ function SectionElement:CreateToggle(name, callback)
     toggleGui.ImageButton.MouseButton1Down:Connect(function()
         toggleTable.boolean = not toggleTable.boolean
         setToggleColor(toggleGui, toggleTable.boolean)
-        callback(toggleTable.boolean, toggleTable.sliderValue)
+        toggleTable.callback(toggleTable.boolean, toggleTable.sliderValue)
+    end)
+
+    toggleGui.ImageButton.MouseEnter:Connect(function()
+        toggleTable.toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+
+    toggleGui.ImageButton.MouseLeave:Connect(function()
+        toggleTable.toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
     end)
 
     return setmetatable(toggleTable, ToggleElement)
 end
 
-function ToggleElement:SetToggle(boolean)
-    self.boolean = boolean
-    setToggleColor(self.toggleGui, self.boolean)
-    self.callback(self.boolean, self.value)
+function ToggleElement:Set(boolean)
+    if boolean ~= self.boolean then
+        self.boolean = boolean
+        setToggleColor(self.toggleGui, self.boolean)
+        self.callback(self.boolean, self.value)
+    end
 end
 
 local function setupBind(self)
@@ -263,10 +284,15 @@ local function setupBind(self)
     end
 end
 
-function ToggleElement:AddKeybind(bindsToSet, callback)
+function ToggleElement:AddKeybind(settings)
+    --[[
+        settings:
+        default = {Secondary Bind, Primary Bind)?
+        callback = function?
+    ]]
     self.keybindGui = self.assets.KeyBind:Clone()
     self.keybindGui.Parent = self.toggleGui
-    self.bindCallback = callback
+    self.bindCallback = settings.callback
     self.bindConnections = {}
 
     self.keybindGui.Button.MouseButton1Down:Connect(function()
@@ -294,8 +320,11 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
              
                 if self.primaryInput then
                     getInputs:Disconnect()
-                    self.bindCallback({self.secondaryInput, self.primaryInput})
                     setupBind(self)
+
+                    if self.bindCallback then
+                        self.bindCallback({self.primaryInput, self.secondaryInput})
+                    end
                 end
             end
         end)
@@ -306,7 +335,9 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
         self.secondaryInput = nil
         self.primaryInput = nil
 
-        self.bindCallback()
+        if self.bindCallback then
+            self.bindCallback()
+        end
 
         if #self.bindConnections >= 1 then
             for i,v in pairs(self.bindConnections) do
@@ -316,8 +347,8 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
         end
     end)
 
-    if bindsToSet and typeof(bindsToSet) == 'table' then
-        for i,v in pairs(bindsToSet) do
+    if settings.default and typeof(settings.default) == 'table' then
+        for i,v in pairs(settings.default) do
             if secondaryBinds[v] then
                 self.secondaryInput = v
             end
@@ -337,54 +368,59 @@ function ToggleElement:AddKeybind(bindsToSet, callback)
     return self
 end
 
-function ToggleElement:SetKeybind(bindsToSet)
-    if bindsToSet and typeof(bindsToSet) == 'table' then
-        if #self.bindConnections >= 1 then
-            for i,v in pairs(self.bindConnections) do
-                v:Disconnect()
-                self.bindConnections[i] = nil
+function ToggleElement:SetBind(bindsToSet)
+    if self.keybindGui then
+        if bindsToSet and typeof(bindsToSet) == 'table' then
+            if #self.bindConnections >= 1 then
+                for i,v in pairs(self.bindConnections) do
+                    v:Disconnect()
+                    self.bindConnections[i] = nil
+                end
             end
-        end
-
-        self.secondaryInput = nil
-        self.primaryInput = nil
-
-        for i,v in pairs(bindsToSet) do
-            if secondaryBinds[v] then
-                self.secondaryInput = v
-            end
-
-            if not table.find(bindBlacklist, v) then
-                self.primaryInput = v
-            end
-        end
-
-        if self.secondaryInput and not self.primaryInput then
+    
             self.secondaryInput = nil
-            return
-        else
-            self.bindCallback({self.secondaryInput, self.primaryInput})
-            setupBind(self)
+            self.primaryInput = nil
+    
+            for i,v in pairs(bindsToSet) do
+                if secondaryBinds[v] then
+                    self.secondaryInput = v
+                end
+    
+                if not table.find(bindBlacklist, v) then
+                    self.primaryInput = v
+                end
+            end
+    
+            if self.secondaryInput and not self.primaryInput then
+                self.secondaryInput = nil
+                return
+            else
+                setupBind(self)
+
+                if self.bindCallback then
+                    self.bindCallback({self.primaryInput, self.secondaryInput})
+                end
+            end
         end
     end
 end
 
 function ToggleElement:GetKeybind()
-    return {self.secondaryInput, self.primaryInput}
+    if self.keybindGui then
+        return {self.primaryInput, self.secondaryInput}
+    end
 end
 
-function ToggleElement:AddSlider(default, minMax)
-    self.sliderGui = self.assets.ToggleSlider:Clone()
-    self.minMax = minMax
+local function round(number, decimalPlaces)
+    local power = math.pow(10, decimalPlaces)
+    return math.round(number * power) / power 
+end
+
+local function createSlider(self, callback)
     local sliderConnections = {}
 
-    self.sliderGui.Frame.Size = UDim2.new((default - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
-    self.sliderValue = default
-    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
-    self.toggleGui.Size = UDim2.new(1, 0, 0, 40)
-    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
-    self.sliderGui.Parent = self.toggleGui
+    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
+    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
 
     self.sliderGui.TextLabel.MouseButton1Down:Connect(function(X)
         for i,v in pairs(sliderConnections) do
@@ -392,26 +428,38 @@ function ToggleElement:AddSlider(default, minMax)
             sliderConnections[i] = nil
         end
 
-        self.sliderValue = math.round((X - self.sliderGui.Frame.AbsolutePosition.x) / self.sliderGui.TextLabel.AbsoluteSize.X * (self.minMax[2] - self.minMax[1]) + self.minMax[1])
-        self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
-        self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
-        self.callback(self.boolean, self.sliderValue)
+        self.sliding = true
+        local previousSliderValue = self.sliderValue
+        self.sliderValue = round((X - self.sliderGui.Frame.AbsolutePosition.x) / self.sliderGui.TextLabel.AbsoluteSize.X * (self.extrema[2] - self.extrema[1]) + self.extrema[1], self.decimalPlaces)
+        
+        if self.sliderValue ~= previousSliderValue then
+            self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
+            self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
+            callback(self.sliderValue)
+        end
+
         sliderConnections[#sliderConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProccessed)
             if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
                 local precentage = math.clamp((inputObject.Position.X - self.sliderGui.Frame.AbsolutePosition.X) / self.sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
                 local previousSliderValue = self.sliderValue
-                self.sliderValue = math.round(precentage * (self.minMax[2] - self.minMax[1]) + self.minMax[1])
+                self.sliderValue = round(precentage * (self.extrema[2] - self.extrema[1]) + self.extrema[1], self.decimalPlaces)
         
                 if previousSliderValue ~= self.sliderValue then
-                    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
-                    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
-                    self.callback(self.boolean, self.sliderValue)
+                    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
+                    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
+                    callback(self.sliderValue)
                 end
             end
         end)
 
         sliderConnections[#sliderConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
             if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+                self.sliding = false
+
+                if not self.selected then
+                    self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+                end
+
                 for i,v in pairs(sliderConnections) do
                     v:Disconnect()
                     sliderConnections[i] = nil
@@ -420,103 +468,119 @@ function ToggleElement:AddSlider(default, minMax)
         end)
 
         sliderConnections[#sliderConnections + 1] = UserInputService.WindowFocusReleased:Connect(function()
+            self.sliding = false
+
+            if not self.selected then
+                self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+            end
+
             for i,v in pairs(sliderConnections) do
                 v:Disconnect()
                 sliderConnections[i] = nil
             end
         end)
     end)
+
+    self.sliderGui.TextLabel.MouseEnter:Connect(function()
+        self.selected = true
+        self.sliderGui.Border.ImageColor3 = Color3.fromRGB(255,255,255)
+    end)
+
+    self.sliderGui.TextLabel.MouseLeave:Connect(function()
+        self.selected = false
+        if not self.sliding then
+            self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+        end
+    end)
+end
+
+function ToggleElement:AddSlider(settings)
+    --[[
+        settings:
+        minimum = number
+        maximum = number
+        default = number
+        decimalPlaces = number?
+        callback = function
+    ]]--
+    self.sliderGui = self.assets.SliderElement:Clone()
+    self.extrema = {settings.minimum, settings.maximum}
+    self.decimalPlaces = settings.decimalPlaces or 0
+    self.sliderValue = round(settings.default, self.decimalPlaces)
+    
+    self.sliderGui.Parent = self.toggleGui
+    self.toggleGui.Size = UDim2.new(1, 0, 0, 40)
+    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+
+    createSlider(self, function(value)
+        self.callback(self.boolean, value)
+    end)
+
     return self
 end
 
-function ToggleElement:SetSlider(number)
-    if self.sliderValue then
-        local number = math.clamp(number, self.minMax[1], self.minMax[2])
+local function setSlider(self, number)
+    if self.sliderGui then
+        local number = round(math.clamp(number, self.extrema[1], self.extrema[2]), self.decimalPlaces)
 
-        self.sliderGui.Frame.Size = UDim2.new((number - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
+        self.sliderGui.Frame.Size = UDim2.new((number - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
         self.sliderValue = number
-        self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
+        self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
         self.callback(self.boolean, self.sliderValue)
     end
+end
+
+function ToggleElement:SetSlider(number)
+    setSlider(self, number)
 end
 
 local SliderElement = {}
 SliderElement.__index = SliderElement
 
-function SectionElement:CreateSlider(name, default, minMax, callback)
-    local slider = {}
-    slider.sliderGui = self.assets.Slider:Clone()
-    slider.minMax = minMax
-    slider.callback = callback
-    local sliderConnections = {}
-    
-    slider.sliderGui.Slider.Frame.Size = UDim2.new((default - slider.minMax[1]) / (slider.minMax[2] - slider.minMax[1]), 0, 1, 0)
-    slider.sliderValue = default
-    slider.sliderGui.Slider.TextLabel.Text = slider.sliderValue..' / '..slider.minMax[2]
-    slider.sliderGui.TextLabel.Text = name
-    slider.sliderGui.Parent = self.section.Frame.Holder
+function SectionElement:CreateSlider(settings)
+    --[[
+        settings:
+        name = string
+        minimum = number
+        maximum = number
+        default = number
+        decimalPlaces = number?
+    ]]--
+    local sliderGui = self.assets.Slider:Clone()
+    local sliderElement = self.assets.SliderElement:Clone()
+
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    sliderGui.TextLabel.Text = settings.name
+    sliderGui.Parent = self.section.Frame.Holder
+    SliderElement.Parent = sliderGui
 
-    slider.sliderGui.Slider.TextLabel.MouseButton1Down:Connect(function(X)
-        for i,v in pairs(sliderConnections) do
-            v:Disconnect()
-            sliderConnections[i] = nil
-        end
+    local self = {}
 
-        slider.sliderValue = math.round((X - slider.sliderGui.Slider.Frame.AbsolutePosition.x) / slider.sliderGui.TextLabel.AbsoluteSize.X * (slider.minMax[2] - slider.minMax[1]) + slider.minMax[1])
-        slider.sliderGui.Slider.Frame.Size = UDim2.new((slider.sliderValue - slider.minMax[1]) / (slider.minMax[2] - slider.minMax[1]), 0, 1, 0)
-        slider.sliderGui.Slider.TextLabel.Text = slider.sliderValue..' / '..slider.minMax[2]
-        slider.callback(slider.boolean, slider.sliderValue)
-        sliderConnections[1] = UserInputService.InputChanged:Connect(function(inputObject, gameProccessed)
-            if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-                local precentage = math.clamp((inputObject.Position.X - slider.sliderGui.Slider.Frame.AbsolutePosition.X) / slider.sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
-                local previousSliderValue = slider.sliderValue
-                slider.sliderValue = math.round(precentage * (slider.minMax[2] - slider.minMax[1]) + slider.minMax[1])
-                
-                
+    self.sliderGui = sliderElement
+    self.extrema = {settings.minimum, settings.maximum}
+    self.callback = settings.callback
+    self.decimalPlaces = settings.decimalPlaces or 0
 
-                if previousSliderValue ~= slider.sliderValue then
-                    slider.sliderGui.Slider.Frame.Size = UDim2.new((slider.sliderValue - slider.minMax[1]) / (slider.minMax[2] - slider.minMax[1]), 0, 1, 0)
-                    slider.sliderGui.Slider.TextLabel.Text = slider.sliderValue..' / '..slider.minMax[2]
-                    slider.callback(slider.sliderValue)
-                end
-            end
-        end)
+    createSlider(self, settings.callback)
 
-        sliderConnections[2] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
-            if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
-                for i,v in pairs(sliderConnections) do
-                    v:Disconnect()
-                    sliderConnections[i] = nil
-                end
-            end
-        end)
-
-        sliderConnections[3] = UserInputService.WindowFocusReleased:Connect(function()
-            for i,v in pairs(sliderConnections) do
-                v:Disconnect()
-                sliderConnections[i] = nil
-            end
-        end)
-    end)
-
-    return setmetatable(slider, SliderElement)
+    return setmetatable(self, SliderElement)
 end
 
-function SliderElement:SetSlider(number)
-    local number = math.clamp(number, self.minMax[1], self.minMax[2])
-
-    self.sliderGui.Slider.Frame.Size = UDim2.new((number - self.minMax[1]) / (self.minMax[2] - self.minMax[1]), 0, 1, 0)
-    self.sliderValue = number
-    self.sliderGui.Slider.TextLabel.Text = self.sliderValue..' / '..self.minMax[2]
-    self.callback(self.sliderValue)
+function SliderElement:Set(number)
+    setSlider(self, number)
 end
 
-function SectionElement:CreateButton(name, callback)
+function SectionElement:CreateButton(settings)
+    --[[
+        settings:
+        name = string
+        callback = function
+    ]]
     local button = self.assets.Button:Clone()
 
-    button.ImageButton.Text = name
+    button.ImageButton.Text = settings.name
     button.Parent = self.section.Frame.Holder
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
@@ -524,7 +588,7 @@ function SectionElement:CreateButton(name, callback)
     button.ImageButton.MouseButton1Down:Connect(function()
         button.ImageButton.TextColor3 = Color3.fromRGB(27, 27, 27)
         button.ImageButton.BackgroundColor3 = Color3.new(1, 1, 1)
-        callback()
+        settings.callback()
     end)
 
     button.ImageButton.MouseButton1Up:Connect(function()
@@ -532,9 +596,14 @@ function SectionElement:CreateButton(name, callback)
         button.ImageButton.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
     end)
 
+    button.ImageButton.MouseEnter:Connect(function()
+        button.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+
     button.ImageButton.MouseLeave:Connect(function()
         button.ImageButton.TextColor3 = Color3.new(1, 1, 1)
         button.ImageButton.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
+        button.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
     end)
 end
 
