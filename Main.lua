@@ -191,28 +191,28 @@ local function setToggleColor(toggleGui, boolean)
     end
 end
 
-function SectionElement:CreateToggle(settings)
+function SectionElement:CreateToggle(elements)
     --[[
-        Settings:
         name = string
         callback = function
         default = boolean?
     ]]--
     local toggleGui = self.assets.Toggle:Clone()
     local toggleTable = {
-        boolean = settings.default or false,
+        boolean = elements.default or false,
         toggleGui = toggleGui,
-        callback = settings.callback,
+        callback = elements.callback,
         assets = self.assets,
         section = self.section,
         scrollingFrame = self.scrollingFrame
     }
 
     if toggleTable.boolean ~= false then
+        elements.callback(self.boolean)
         setToggleColor(toggleTable.toggleGui, toggleTable.boolean)
     end
 
-    toggleGui.TextLabel.Text = settings.name
+    toggleGui.TextLabel.Text = elements.name
     toggleGui.Parent = self.section.Frame.Holder
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
@@ -284,15 +284,15 @@ local function setupBind(self)
     end
 end
 
-function ToggleElement:AddKeybind(settings)
+function ToggleElement:AddKeybind(elements)
     --[[
-        settings:
+        elements:
         default = {Secondary Bind, Primary Bind)?
         callback = function?
     ]]
     self.keybindGui = self.assets.KeyBind:Clone()
     self.keybindGui.Parent = self.toggleGui
-    self.bindCallback = settings.callback
+    self.bindCallback = elements.callback
     self.bindConnections = {}
 
     self.keybindGui.Button.MouseButton1Down:Connect(function()
@@ -347,8 +347,8 @@ function ToggleElement:AddKeybind(settings)
         end
     end)
 
-    if settings.default and typeof(settings.default) == 'table' then
-        for i,v in pairs(settings.default) do
+    if elements.default and typeof(elements.default) == 'table' then
+        for i,v in pairs(elements.default) do
             if secondaryBinds[v] then
                 self.secondaryInput = v
             end
@@ -494,9 +494,9 @@ local function createSlider(self, callback)
     end)
 end
 
-function ToggleElement:AddSlider(settings)
+function ToggleElement:AddSlider(elements)
     --[[
-        settings:
+        elements:
         minimum = number
         maximum = number
         default = number
@@ -504,9 +504,9 @@ function ToggleElement:AddSlider(settings)
         callback = function
     ]]--
     self.sliderGui = self.assets.SliderElement:Clone()
-    self.extrema = {settings.minimum, settings.maximum}
-    self.decimalPlaces = settings.decimalPlaces or 0
-    self.sliderValue = round(settings.default, self.decimalPlaces)
+    self.extrema = {elements.minimum, elements.maximum}
+    self.decimalPlaces = elements.decimalPlaces or 0
+    self.sliderValue = round(elements.default, self.decimalPlaces)
     
     self.sliderGui.Parent = self.toggleGui
     self.toggleGui.Size = UDim2.new(1, 0, 0, 40)
@@ -538,9 +538,9 @@ end
 local SliderElement = {}
 SliderElement.__index = SliderElement
 
-function SectionElement:CreateSlider(settings)
+function SectionElement:CreateSlider(elements)
     --[[
-        settings:
+        elements:
         name = string
         minimum = number
         maximum = number
@@ -552,18 +552,18 @@ function SectionElement:CreateSlider(settings)
 
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
-    sliderGui.TextLabel.Text = settings.name
+    sliderGui.TextLabel.Text = elements.name
     sliderGui.Parent = self.section.Frame.Holder
     SliderElement.Parent = sliderGui
 
     local self = {}
 
     self.sliderGui = sliderElement
-    self.extrema = {settings.minimum, settings.maximum}
-    self.callback = settings.callback
-    self.decimalPlaces = settings.decimalPlaces or 0
+    self.extrema = {elements.minimum, elements.maximum}
+    self.callback = elements.callback
+    self.decimalPlaces = elements.decimalPlaces or 0
 
-    createSlider(self, settings.callback)
+    createSlider(self, elements.callback)
 
     return setmetatable(self, SliderElement)
 end
@@ -572,15 +572,15 @@ function SliderElement:Set(number)
     setSlider(self, number)
 end
 
-function SectionElement:CreateButton(settings)
+function SectionElement:CreateButton(elements)
     --[[
-        settings:
+        elements:
         name = string
         callback = function
     ]]
     local button = self.assets.Button:Clone()
 
-    button.ImageButton.Text = settings.name
+    button.ImageButton.Text = elements.name
     button.Parent = self.section.Frame.Holder
     self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
@@ -588,7 +588,7 @@ function SectionElement:CreateButton(settings)
     button.ImageButton.MouseButton1Down:Connect(function()
         button.ImageButton.TextColor3 = Color3.fromRGB(27, 27, 27)
         button.ImageButton.BackgroundColor3 = Color3.new(1, 1, 1)
-        settings.callback()
+        elements.callback()
     end)
 
     button.ImageButton.MouseButton1Up:Connect(function()
