@@ -106,11 +106,11 @@ tab.__index = tab
 
 function Gui:CreateTab(name)
     local tabButton = self.assets.Tab:Clone()
-    local scrollingFrame = self.assets.TabFrame:Clone()
+    local scrollingFrame = self.assets.Window:Clone()
 
     tabButton.Text = name
     tabButton.Parent = self.gui.Frame.Tabs.Holder
-    scrollingFrame.Parent = self.gui.Frame.Frames
+    scrollingFrame.Parent = self.gui.Frame.Windows
     self.scrollingFrames[tabButton] = scrollingFrame
 
 
