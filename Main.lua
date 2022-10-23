@@ -2,8 +2,13 @@ local UiLibrary = {}
 UiLibrary.__index = UiLibrary
 
 local ContextActionService = game:GetService('ContextActionService')
+local RunService = game:GetService('RunService')
 local UserInputService = game:GetService('UserInputService')
 
+local currentColorPicker
+local currentColorPickerButton
+local colorPickerConnections = {}
+local tempColorPickerConnections = {}
 local secondaryBinds = {
     [Enum.KeyCode.LeftControl.Name] = 'LCtrl',
     [Enum.KeyCode.LeftAlt.Name] = 'LAlt',
@@ -34,15 +39,15 @@ function UiLibrary.new(name)
     local mainGui = assets.ScreenGui:Clone()
     local hiding = true
     local dragConnections = {}
-
-    if syn then
+    mainGui.Parent = game.CoreGui
+    --[[if syn then
         syn.protect_gui(mainGui)
         mainGui.Parent = game.CoreGui
     elseif gethui then
         mainGui.Parent = gethui()
     else
         mainGui.Parent = game.CoreGui
-    end
+    end]]--
 
     mainGui.Frame.TopBar.GuiName.Text = name
 
@@ -142,7 +147,8 @@ function Gui:CreateTab(name)
     end)
     return setmetatable({
         scrollingFrame = scrollingFrame,
-        assets = self.assets
+        assets = self.assets,
+        gui = self.gui
     }, tab)
 end
 
@@ -176,7 +182,8 @@ function tab:CreateSection(name)
     return setmetatable({
         section = sectionGui,
         assets = self.assets,
-        scrollingFrame = self.scrollingFrame
+        scrollingFrame = self.scrollingFrame,
+        gui = self.gui
     }, SectionElement)
 end
 
@@ -194,8 +201,8 @@ end
 function SectionElement:CreateToggle(config)
     --[[
         name = string
-        callback = function
-        default = boolean?
+        callback = Function
+        default = Boolean?
     ]]--
     local toggleGui = self.assets.Toggle:Clone()
     local toggleTable = {
@@ -287,7 +294,7 @@ function ToggleElement:AddKeybind(config)
     --[[
         config:
         default = {Secondary Bind, Primary Bind)?
-        callback = function?
+        callback = Function?
     ]]
     self.keybindGui = self.assets.KeyBind:Clone()
     self.keybindGui.Parent = self.toggleGui
@@ -496,11 +503,11 @@ end
 function ToggleElement:AddSlider(config)
     --[[
         config:
-        minimum = number
-        maximum = number
-        default = number
-        decimalPlaces = number?
-        callback = function
+        minimum = Number
+        maximum = Number
+        default = Number
+        decimalPlaces = Number?
+        callback = Function
     ]]--
     self.sliderGui = self.assets.SliderElement:Clone()
     self.extrema = {config.minimum, config.maximum}
@@ -540,11 +547,11 @@ SliderElement.__index = SliderElement
 function SectionElement:CreateSlider(config)
     --[[
         config:
-        name = string
-        minimum = number
-        maximum = number
-        default = number
-        decimalPlaces = number?
+        name = String
+        minimum = Number
+        maximum = Number
+        default = Number
+        decimalPlaces = Number?
     ]]--
     local sliderGui = self.assets.Slider:Clone()
     local sliderElement = self.assets.SliderElement:Clone()
@@ -574,8 +581,8 @@ end
 function SectionElement:CreateButton(config)
     --[[
         config:
-        name = string
-        callback = function
+        name = String
+        callback = Function
     ]]
     local button = self.assets.Button:Clone()
 
@@ -604,6 +611,208 @@ function SectionElement:CreateButton(config)
         button.ImageButton.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
         button.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
     end)
+end
+
+local ColorPickerElement = {}
+ColorPickerElement.__index = ColorPickerElement
+
+local function RGBToHSV(color)
+	local r = color.R
+	local g = color.G
+	local b = color.B
+	local max = math.max(r, g, b)
+	local min = math.min(r, g, b)
+	local delta = max - min
+	local saturation
+	local hue
+	local value = max
+
+	if max == 0 then
+		saturation = 0
+	else
+		saturation = delta/max
+	end
+
+	if delta == 0 then
+		hue = 0
+	elseif max == r then
+		hue = 60 * ((g - b) * delta % 6) 
+	elseif max == g then
+		hue = 60 * ((b - r) / delta + 2) 
+	else
+		hue = 60 * ((r - g) * delta + 4)
+	end
+
+	return hue/360, saturation, value
+end
+
+
+local function updateColorPicker(self)
+    local newColor = Color3.fromHSV(self.hue, self.saturation, self.value)
+
+    self.button.ImageButton.BackgroundColor3 = newColor
+    currentColorPicker.Frame.Button.PlaceholderText = math.round(newColor.R * 255)..', '..math.round(newColor.G * 255)..', '..math.round(newColor.B * 255)
+    currentColorPicker.Gradient.Cursor.Position = UDim2.new(self.saturation, 0, 1 - self.value, 0)
+    currentColorPicker.Gradient.UIGradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(self.hue, 1, 1))
+    }
+end
+
+function SectionElement:CreateColorPicker(config)
+    --[[
+        config:
+        name = String
+        callback = Function
+        default = Color3
+    ]]--
+    local button = self.assets.Toggle:Clone()
+    button.ImageButton.BackgroundColor3 = config.default
+    local h,s,v = RGBToHSV(config.default)
+    local mouseLeave = false
+    local colorPicker = {
+        callback = config.callback,
+        button = button,
+        hue = h,
+        saturation = s,
+        value = v
+    }
+
+    button.TextLabel.Text = config.name
+    button.Parent = self.section.Frame.Holder
+
+    button.ImageButton.MouseEnter:Connect(function()
+        mouseLeave = false
+        button.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
+    end)
+
+    button.ImageButton.MouseLeave:Connect(function()
+        mouseLeave = true
+        if currentColorPickerButton ~= button then
+            button.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+        end
+    end)    
+
+    button.ImageButton.MouseButton1Down:Connect(function()
+        if currentColorPickerButton == button then
+            currentColorPickerButton = nil
+            currentColorPicker:Destroy()
+            currentColorPicker = nil
+
+            for i,v in pairs(tempColorPickerConnections) do
+                v:Disconnect()
+                tempColorPickerConnections[i] = nil
+            end
+
+            for i,v in pairs(colorPickerConnections) do
+                v:Disconnect()
+                colorPickerConnections[i] = nil
+            end
+
+            if mouseLeave then
+                button.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        else
+            if currentColorPicker then
+                colorPicker.Visible = false
+                currentColorPickerButton.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+
+                for i,v in pairs(tempColorPickerConnections) do
+                    v:Disconnect()
+                    tempColorPickerConnections[i] = nil
+                end
+
+                for i,v in pairs(colorPickerConnections) do
+                    v:Disconnect()
+                    colorPickerConnections[i] = nil
+                end
+            else
+                currentColorPicker = self.assets.ColorPicker:Clone()
+                currentColorPicker.Parent = self.gui
+            end
+    
+            currentColorPickerButton = button
+            updateColorPicker(colorPicker)
+            colorPicker.Visible = true
+    
+            colorPickerConnections[#colorPickerConnections + 1] = RunService.Heartbeat:Connect(function()
+                currentColorPicker.Position = UDim2.new(0, button.ImageButton.AbsolutePosition.X, 0, button.ImageButton.AbsolutePosition.Y + 75)
+            end)
+
+            colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Slider.MouseButton1Down:Connect(function(X, Y)
+                colorPicker.hue = (X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X
+                updateColorPicker(colorPicker)
+                self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                tempColorPickerConnections[#tempColorPickerConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProcessed)
+                    if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                        colorPicker.hue = math.clamp((inputObject.Position.X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X, 0, 1)
+                        updateColorPicker(colorPicker)
+                        self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+                    end
+                end)
+            end)
+
+            colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Gradient.TextButton.MouseButton1Down:Connect(function(X, Y)
+                colorPicker.saturation = (X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X
+                colorPicker.value = 1 - ((Y - 35) - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y
+                updateColorPicker(colorPicker)
+                self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                tempColorPickerConnections[#tempColorPickerConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProcessed)
+                    if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
+                        colorPicker.saturation = math.clamp((inputObject.Position.X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X, 0, 1)
+                        colorPicker.value = 1 - math.clamp((inputObject.Position.Y - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y, 0, 1)
+                        updateColorPicker(colorPicker)
+                        self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+                    end
+                end)
+            end)
+
+            colorPickerConnections[#colorPickerConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
+                if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
+                    for i,v in pairs(tempColorPickerConnections) do
+                        v:Disconnect()
+                        tempColorPickerConnections[i] = nil
+                    end
+                end
+            end)
+
+            colorPickerConnections[#colorPickerConnections + 1] =  UserInputService.WindowFocusReleased:Connect(function()
+                for i,v in pairs(tempColorPickerConnections) do
+                    v:Disconnect()
+                    tempColorPickerConnections[i] = nil
+                end
+            end)
+
+            colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Frame.Button.FocusLost:Connect(function(enterPressed, self)
+                if enterPressed then
+                    local color = string.split(string.gsub(currentColorPicker.Frame.Button.Text, " ", ""), ",")
+                    local h, s, v = RGBToHSV(Color3.fromRGB(color[1], color[2], color[3]))
+
+                    colorPicker.hue = h
+                    colorPicker.saturation = s
+                    colorPicker.value = v
+                    updateColorPicker(colorPicker)
+                    self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+                end
+
+                currentColorPicker.Frame.Button.Text = ""
+            end)
+        end
+    end)
+    
+    return setmetatable(colorPicker, ColorPickerElement)
+end
+
+function ColorPickerElement:Set(color)
+    local h, s, v = RGBToHSV(color)
+
+    self.hue = h
+    self.saturation = s
+    self.value = v
+    updateColorPicker(self)
+    task.spawn(self.callback, Color3.fromHSV(self.hue, self.saturation, self.value))
 end
 
 return UiLibrary
