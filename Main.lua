@@ -830,10 +830,13 @@ function SectionElement:CreateColorPicker(config)
             updateColorPicker(colorPicker)
             
             colorPickerConnections[#colorPickerConnections + 1] = RunService.Heartbeat:Connect(function()
+                if not currentColorPicker.Visible then
+                    currentColorPicker.Visible = true
+                end
                 currentColorPicker.Position = UDim2.new(0, button.ImageButton.AbsolutePosition.X, 0, button.ImageButton.AbsolutePosition.Y + 65)
             end)
 
-            currentColorPicker.Visible = true
+            
 
             colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Slider.MouseButton1Down:Connect(function(X, Y)
                 colorPicker._hue = (X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X
