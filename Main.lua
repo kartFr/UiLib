@@ -274,9 +274,9 @@ end
 
 local function setupBind(self)
     if self._secondaryInput then
-        self._keybindGui._button.Text = secondaryBinds[self._secondaryInput].. ' + '.. self._primaryInput
+        self._keybindGui.Button.Text = secondaryBinds[self._secondaryInput].. ' + '.. self._primaryInput
     else
-        self._keybindGui._button.Text = self._primaryInput
+        self._keybindGui.Button.Text = self._primaryInput
     end
 
     if self._bindFlag then
@@ -341,7 +341,7 @@ function ToggleElement:AddKeybind(config)
     self._bindConnections = {}
     self._bindFlag = config.flag
 
-    self._keybindGui._button.MouseButton1Down:Connect(function()
+    self._keybindGui.Button.MouseButton1Down:Connect(function()
         if #self._bindConnections >= 1 then
             for i,v in pairs(self._bindConnections) do
                 v:Disconnect()
@@ -349,7 +349,7 @@ function ToggleElement:AddKeybind(config)
             end
         end
 
-        self._keybindGui._button.Text = '...'
+        self._keybindGui.Button.Text = '...'
         self._secondaryInput = nil
         self._primaryInput = nil
         local getInputs
@@ -358,7 +358,7 @@ function ToggleElement:AddKeybind(config)
             if not gameProccessed then
                 if secondaryBinds[inputObject.KeyCode.Name] then
                     self._secondaryInput  = inputObject.KeyCode.Name
-                    self._keybindGui._button.Text = secondaryBinds[self._secondaryInput ].. ' + ...'
+                    self._keybindGui.Button.Text = secondaryBinds[self._secondaryInput ].. ' + ...'
                 elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
                     self._primaryInput = inputObject.KeyCode.Name
                 end
@@ -376,8 +376,8 @@ function ToggleElement:AddKeybind(config)
         end)
     end)
 
-    self._keybindGui._button.MouseButton2Down:Connect(function()
-        self._keybindGui._button.Text = 'None'
+    self._keybindGui.Button.MouseButton2Down:Connect(function()
+        self._keybindGui.Button.Text = 'None'
         self._secondaryInput = nil
         self._primaryInput = nil
 
@@ -615,13 +615,12 @@ function SectionElement:CreateSlider(config)
     local sliderGui = self._assets.Slider:Clone()
     local sliderElement = self._assets.SliderElement:Clone()
 
-    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     sliderGui.TextLabel.Text = config.name
     sliderElement.Parent = sliderGui
     sliderGui.Parent = self._section.Frame.Holder
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     
-
     local slider = {}
 
     slider._sliderGui = sliderElement
@@ -763,11 +762,11 @@ function SectionElement:CreateColorPicker(config)
         _flagName = config.flag
     }
 
-    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     button.TextLabel.Text = config.name
     button.Parent = self._section.Frame.Holder
-
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    
     if config.flag then
         self._flags[config.flag] = config.default
     end
@@ -809,7 +808,7 @@ function SectionElement:CreateColorPicker(config)
             end
         else
             if currentColorPicker then
-                colorPicker.Visible = false
+                currentColorPicker.Visible = false
                 currentColorPickerButton.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
 
                 for i,v in pairs(tempColorPickerConnections) do
@@ -824,6 +823,7 @@ function SectionElement:CreateColorPicker(config)
             else
                 currentColorPicker = self._assets.ColorPicker:Clone()
                 currentColorPicker.Parent = self._gui
+                currentColorPicker.Visible = false
             end
     
             currentColorPickerButton = button
