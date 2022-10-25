@@ -279,6 +279,10 @@ local function setupBind(self)
         self._keybindGui._button.Text = self._primaryInput
     end
 
+    if self._bindFlag then
+        self._flags[self._bindFlag] = {self._primaryInput, self._secondaryInput}
+    end
+
     local secondaryInputDown
 
     self._bindConnections[#self._bindConnections + 1] = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
@@ -329,11 +333,13 @@ function ToggleElement:AddKeybind(config)
         config:
         default = {Secondary Bind, Primary Bind)?
         callback = Function?
+        flag = String?
     ]]
     self._keybindGui = self._assets.KeyBind:Clone()
     self._keybindGui.Parent = self._toggleGui
     self._bindCallback = config.callback
     self._bindConnections = {}
+    self._bindFlag = config.flag
 
     self._keybindGui._button.MouseButton1Down:Connect(function()
         if #self._bindConnections >= 1 then
@@ -443,12 +449,6 @@ function ToggleElement:SetBind(newBind)
     end
 end
 
-function ToggleElement:GetKeybind()
-    if self._keybindGui then
-        return {self._primaryInput, self._secondaryInput}
-    end
-end
-
 local function round(number, decimalPlaces)
     local power = math.pow(10, decimalPlaces)
     return math.round(number * power) / power 
@@ -474,7 +474,7 @@ local function createSlider(self)
             self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
 
             if self._sliderFlagName then
-                self._flags[self._sliderFlagName] = self.default
+                self._flags[self._sliderFlagName] = self._sliderValue
             end
 
             self._sliderCallback(self._sliderValue)
@@ -491,7 +491,7 @@ local function createSlider(self)
                     self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
 
                     if self._sliderFlagName then
-                        self._flags[self._sliderFlagName] = self.default
+                        self._flags[self._sliderFlagName] = self._sliderValue
                     end
 
                     self._sliderCallback(self._sliderValue)
@@ -618,8 +618,9 @@ function SectionElement:CreateSlider(config)
     self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
     self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     sliderGui.TextLabel.Text = config.name
+    sliderElement.Parent = sliderGui
     sliderGui.Parent = self._section.Frame.Holder
-    SliderElement.Parent = sliderGui
+    
 
     local slider = {}
 
@@ -646,8 +647,8 @@ end
 
 function SliderElement:Set(number)
     if typeof(number) == "number" then
-        if self._flagName then
-            self._flags[self._flagName] = number
+        if self._sliderFlagName then
+            self._flags[self._sliderFlagName] = number
         end
     
         task.spawn(setSlider, self, number)
@@ -723,7 +724,7 @@ local function RGBToHSV(color)
 		hue = 60 * ((r - g) * delta + 4)
 	end
 
-	return math.clamp(hue/360, 0, 1), math.clamp(saturation, 0, 1), math.clamp(value, 0, 1)
+	return hue/360, saturation, value
 end
 
 
