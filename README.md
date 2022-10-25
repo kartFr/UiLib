@@ -24,7 +24,8 @@ local Section = Tab:CreateSection(name)
 ## Creating a Toggle
 ```lua
 local Section = Section:CreateToggle({
-name: [`asdasd`]
+name: [String](https://github.com/gmarciani](https://create.roblox.com/docs/reference/engine/libraries/string)
 default: Boolean
 callback: Function
+})
 ```
