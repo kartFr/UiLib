@@ -84,10 +84,11 @@ function UiLibrary.new(name)
     end, false, Enum.KeyCode.RightControl)
 
     return setmetatable({
-        assets = assets,
-        gui = mainGui,
-        tabs = {},
-        scrollingFrames = {}
+        _assets = assets,
+        _gui = mainGui,
+        _tabs = {},
+        _scrollingframes = {},
+        flags = {}
     }, Gui)
 end
 
@@ -110,80 +111,81 @@ local tab = {}
 tab.__index = tab
 
 function Gui:CreateTab(name)
-    local tabButton = self.assets.Tab:Clone()
-    local scrollingFrame = self.assets.Window:Clone()
+    local tab_button = self._assets.Tab:Clone()
+    local scrollingframe = self._assets.Window:Clone()
 
-    tabButton.Text = name
-    tabButton.Parent = self.gui.Frame.Tabs.Holder
-    scrollingFrame.Parent = self.gui.Frame.Windows
-    self.scrollingFrames[tabButton] = scrollingFrame
+    tab_button.Text = name
+    tab_button.Parent = self._gui.Frame.Tabs.Holder
+    scrollingframe.Parent = self._gui.Frame.Windows
+    self._scrollingframes[tab_button] = scrollingframe
 
+    table.insert(self._tabs, tab_button)
 
-    table.insert(self.tabs, tabButton)
-
-    for i,v in pairs(self.tabs) do
-        v.Size = UDim2.new(1/#self.tabs, 0, 1, 0)
+    for i,v in pairs(self._tabs) do
+        v.Size = UDim2.new(1/#self._tabs, 0, 1, 0)
     end
 
-    if #self.tabs == 1 then
-        tabButton.TextColor3 = Color3.fromRGB(27, 27, 27)
-        tabButton.BackgroundColor3 = Color3.new(1, 1, 1)
-        self.CurrentTab = tabButton
+    if #self._tabs == 1 then
+        tab_button.TextColor3 = Color3.fromRGB(27, 27, 27)
+        tab_button.BackgroundColor3 = Color3.new(1, 1, 1)
+        self.CurrentTab = tab_button
     else
-        scrollingFrame.Visible = false
+        scrollingframe.Visible = false
     end
 
-    tabButton.MouseButton1Down:Connect(function()
+    tab_button.MouseButton1Down:Connect(function()
         if self.CurrentTab then
             self.CurrentTab.TextColor3 = Color3.new(1, 1, 1)
             self.CurrentTab.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
-            self.scrollingFrames[self.CurrentTab].Visible = false
-            self.CurrentTab = tabButton
+            self._scrollingframes[self.CurrentTab].Visible = false
+            self.CurrentTab = tab_button
         end
 
-        tabButton.TextColor3 = Color3.fromRGB(27, 27, 27)
-        tabButton.BackgroundColor3 = Color3.new(1, 1, 1)
-        self.scrollingFrames[tabButton].Visible = true
+        tab_button.TextColor3 = Color3.fromRGB(27, 27, 27)
+        tab_button.BackgroundColor3 = Color3.new(1, 1, 1)
+        self._scrollingframes[tab_button].Visible = true
     end)
     return setmetatable({
-        scrollingFrame = scrollingFrame,
-        assets = self.assets,
-        gui = self.gui
+        _scrollingframe = scrollingframe,
+        _assets = self._assets,
+        _gui = self._gui,
+        _flags = self.flags
     }, tab)
 end
 
 local SectionElement = {}
 SectionElement.__index = SectionElement
 
-local function getShortestSide(scrollingFrame, bool)
-    if scrollingFrame.Left.UIListLayout.AbsoluteContentSize.Y <= scrollingFrame.Right.UIListLayout.AbsoluteContentSize.Y then
+local function getShortestSide(_scrollingframe, bool)
+    if _scrollingframe.Left.UIListLayout.AbsoluteContentSize.Y <= _scrollingframe.Right.UIListLayout.AbsoluteContentSize.Y then
         if not bool then
-            return scrollingFrame.Right
+            return _scrollingframe.Right
         else
-            return scrollingFrame.Left
+            return _scrollingframe.Left
         end
     else
         if not bool then
-            return scrollingFrame.Left
+            return _scrollingframe.Left
         else
-            return scrollingFrame.Right
+            return _scrollingframe.Right
         end
     end
 end
 
 function tab:CreateSection(name)
-    local sectionGui = self.assets.Section:Clone()
+    local sectionGui = self._assets.Section:Clone()
 
-    sectionGui.Parent = getShortestSide(self.scrollingFrame, true)
+    sectionGui.Parent = getShortestSide(self._scrollingframe, true)
     sectionGui.Frame.NameGui.TextLabel.Text = name
     sectionGui.Frame.NameGui.Size = UDim2.new(0, sectionGui.Frame.NameGui.TextLabel.TextBounds.X + 6, 0, 20)
     sectionGui.Frame.Frame.Border.Size = UDim2.new(0, sectionGui.Frame.NameGui.TextLabel.TextBounds.X + 8, 0, 21)
 
     return setmetatable({
-        section = sectionGui,
-        assets = self.assets,
-        scrollingFrame = self.scrollingFrame,
-        gui = self.gui
+        _section = sectionGui,
+        _assets = self._assets,
+        _scrollingframe = self._scrollingframe,
+        _gui = self._gui,
+        _flags = self._flags
     }, SectionElement)
 end
 
@@ -203,86 +205,118 @@ function SectionElement:CreateToggle(config)
         name = string
         callback = Function
         default = Boolean?
+        callbackOnCreation = Boolean?
+        flag = String?
     ]]--
-    local toggleGui = self.assets.Toggle:Clone()
+    local toggleGui = self._assets.Toggle:Clone()
     local toggleTable = {
-        boolean = config.default or false,
-        toggleGui = toggleGui,
-        callback = config.callback,
-        assets = self.assets,
-        section = self.section,
-        scrollingFrame = self.scrollingFrame
+        _boolean = config.default or false,
+        _toggleGui = toggleGui,
+        _callback = config.callback,
+        _assets = self._assets,
+        _section = self._section,
+        _scrollingframe = self._scrollingframe,
+        _flagName = config.flag,
+        _flags = self._flags
     }
 
-    if toggleTable.boolean ~= false then
-        setToggleColor(toggleTable.toggleGui, toggleTable.boolean)
+    if toggleTable._boolean ~= false then
+        setToggleColor(toggleTable._toggleGui, toggleTable._boolean)
+    end
+
+    if toggleTable._flagName then
+        self._flags[toggleTable._flagName] = toggleTable._boolean
     end
 
     toggleGui.TextLabel.Text = config.name
-    toggleGui.Parent = self.section.Frame.Holder
-    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    toggleGui.Parent = self._section.Frame.Holder
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
 
     toggleGui.ImageButton.MouseButton1Down:Connect(function()
-        toggleTable.boolean = not toggleTable.boolean
-        setToggleColor(toggleGui, toggleTable.boolean)
-        toggleTable.callback(toggleTable.boolean, toggleTable.sliderValue)
+        toggleTable._boolean = not toggleTable._boolean
+
+        if toggleTable._flagName then
+            self._flags[toggleTable._flagName] = toggleTable._boolean
+        end
+        
+        setToggleColor(toggleGui, toggleTable._boolean)
+        toggleTable._callback(toggleTable._boolean)
     end)
 
     toggleGui.ImageButton.MouseEnter:Connect(function()
-        toggleTable.toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
+        toggleTable._toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(255, 255, 255)
     end)
 
     toggleGui.ImageButton.MouseLeave:Connect(function()
-        toggleTable.toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+        toggleTable._toggleGui.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
     end)
+
+    if config.callbackOnCreation then
+        task.spawn(config.callback, toggleTable._boolean)
+    end
 
     return setmetatable(toggleTable, ToggleElement)
 end
 
 function ToggleElement:Set(boolean)
-    if boolean ~= self.boolean then
-        self.boolean = boolean
-        setToggleColor(self.toggleGui, self.boolean)
-        task.spawn(self.callback, self.boolean, self.value)
+    if typeof(boolean) == "boolean" then
+        self._boolean = boolean
+
+        if self._flagName then
+            self._flags[self._flagName] = self._boolean
+        end
+
+        setToggleColor(self._toggleGui, self._boolean)
+        self._callback(self._boolean)
     end
 end
 
 local function setupBind(self)
-    if self.secondaryInput then
-        self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput].. ' + '.. self.primaryInput
+    if self._secondaryInput then
+        self._keybindGui._button.Text = secondaryBinds[self._secondaryInput].. ' + '.. self._primaryInput
     else
-        self.keybindGui.Button.Text = self.primaryInput
+        self._keybindGui._button.Text = self._primaryInput
     end
 
     local secondaryInputDown
 
-    self.bindConnections[#self.bindConnections + 1] = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
+    self._bindConnections[#self._bindConnections + 1] = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
         if not gameProccessed then
-           if self.secondaryInput then
-                if inputObject.KeyCode.Name == self.secondaryInput then
+           if self._secondaryInput then
+                if inputObject.KeyCode.Name == self._secondaryInput then
                     secondaryInputDown = true
                 end
 
-                if secondaryInputDown and inputObject.KeyCode.Name == self.primaryInput then
-                    self.boolean = not self.boolean
-                    setToggleColor(self.toggleGui, self.boolean)
-                    self.callback(self.boolean, self.sliderValue)
+                if secondaryInputDown and inputObject.KeyCode.Name == self._primaryInput then
+                    self._boolean = not self._boolean
+
+                    if self._flagName then
+                        self._flags[self._flagName] = self._boolean
+                    end
+
+                    setToggleColor(self._toggleGui, self._boolean)
+                    self._callback(self._boolean)
                 end
             else
-                if inputObject.KeyCode.Name == self.primaryInput then
-                    self.boolean = not self.boolean
-                    setToggleColor(self.toggleGui, self.boolean)
-                    self.callback(self.boolean, self.sliderValue)
+                if inputObject.KeyCode.Name == self._primaryInput then
+                    self._boolean = not self._boolean
+
+                    if self._flagName then
+                        self._flags[self._flagName] = self._boolean
+                    end
+
+                    setToggleColor(self._toggleGui, self._boolean)
+                    self._callback(self._boolean)
                 end
            end
         end
     end)
 
-    if self.secondaryInput then
-        self.bindConnections[#self.bindConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
+    if self._secondaryInput then
+        self._bindConnections[#self._bindConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
             if not gameProccessed then
-                if inputObject.KeyCode.Name == self.secondaryInput then
+                if inputObject.KeyCode.Name == self._secondaryInput then
                     secondaryInputDown = false
                 end
             end
@@ -296,59 +330,59 @@ function ToggleElement:AddKeybind(config)
         default = {Secondary Bind, Primary Bind)?
         callback = Function?
     ]]
-    self.keybindGui = self.assets.KeyBind:Clone()
-    self.keybindGui.Parent = self.toggleGui
-    self.bindCallback = config.callback
-    self.bindConnections = {}
+    self._keybindGui = self._assets.KeyBind:Clone()
+    self._keybindGui.Parent = self._toggleGui
+    self._bindCallback = config.callback
+    self._bindConnections = {}
 
-    self.keybindGui.Button.MouseButton1Down:Connect(function()
-        if #self.bindConnections >= 1 then
-            for i,v in pairs(self.bindConnections) do
+    self._keybindGui._button.MouseButton1Down:Connect(function()
+        if #self._bindConnections >= 1 then
+            for i,v in pairs(self._bindConnections) do
                 v:Disconnect()
-                self.bindConnections[i] = nil
+                self._bindConnections[i] = nil
             end
         end
 
-        self.keybindGui.Button.Text = '...'
-        self.secondaryInput = nil
-        self.primaryInput = nil
+        self._keybindGui._button.Text = '...'
+        self._secondaryInput = nil
+        self._primaryInput = nil
         local getInputs
         
         getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
             if not gameProccessed then
                 if secondaryBinds[inputObject.KeyCode.Name] then
-                    self.secondaryInput  = inputObject.KeyCode.Name
-                    self.keybindGui.Button.Text = secondaryBinds[self.secondaryInput ].. ' + ...'
+                    self._secondaryInput  = inputObject.KeyCode.Name
+                    self._keybindGui._button.Text = secondaryBinds[self._secondaryInput ].. ' + ...'
                 elseif not table.find(bindBlacklist, inputObject.KeyCode.Name) then
-                    self.primaryInput = inputObject.KeyCode.Name
+                    self._primaryInput = inputObject.KeyCode.Name
                 end
 
              
-                if self.primaryInput then
+                if self._primaryInput then
                     getInputs:Disconnect()
                     setupBind(self)
 
-                    if self.bindCallback then
-                        self.bindCallback({self.primaryInput, self.secondaryInput})
+                    if self._bindCallback then
+                        self._bindCallback({self._primaryInput, self._secondaryInput})
                     end
                 end
             end
         end)
     end)
 
-    self.keybindGui.Button.MouseButton2Down:Connect(function()
-        self.keybindGui.Button.Text = 'None'
-        self.secondaryInput = nil
-        self.primaryInput = nil
+    self._keybindGui._button.MouseButton2Down:Connect(function()
+        self._keybindGui._button.Text = 'None'
+        self._secondaryInput = nil
+        self._primaryInput = nil
 
-        if self.bindCallback then
-            self.bindCallback()
+        if self._bindCallback then
+            self._bindCallback()
         end
 
-        if #self.bindConnections >= 1 then
-            for i,v in pairs(self.bindConnections) do
+        if #self._bindConnections >= 1 then
+            for i,v in pairs(self._bindConnections) do
                 v:Disconnect()
-                self.bindConnections[i] = nil
+                self._bindConnections[i] = nil
             end
         end
     end)
@@ -356,16 +390,16 @@ function ToggleElement:AddKeybind(config)
     if config.default and typeof(config.default) == 'table' then
         for i,v in pairs(config.default) do
             if secondaryBinds[v] then
-                self.secondaryInput = v
+                self._secondaryInput = v
             end
 
             if not table.find(bindBlacklist, v) and not secondaryBinds[v] then
-                self.primaryInput = v
+                self._primaryInput = v
             end
         end
         
-        if self.secondaryInput and not self.primaryInput then
-            self.secondaryInput = nil
+        if self._secondaryInput and not self._primaryInput then
+            self._secondaryInput = nil
         else
             setupBind(self)
         end
@@ -374,46 +408,44 @@ function ToggleElement:AddKeybind(config)
     return self
 end
 
-function ToggleElement:SetBind(bindsToSet)
-    if self.keybindGui then
-        if bindsToSet and typeof(bindsToSet) == 'table' then
-            if #self.bindConnections >= 1 then
-                for i,v in pairs(self.bindConnections) do
-                    v:Disconnect()
-                    self.bindConnections[i] = nil
-                end
+function ToggleElement:SetBind(newBind)
+    if self._keybindGui and typeof(newBind) == 'table' then
+        if #self._bindConnections >= 1 then
+            for i,v in pairs(self._bindConnections) do
+                v:Disconnect()
+                self._bindConnections[i] = nil
             end
-    
-            self.secondaryInput = nil
-            self.primaryInput = nil
-    
-            for i,v in pairs(bindsToSet) do
-                if secondaryBinds[v] then
-                    self.secondaryInput = v
-                end
-    
-                if not table.find(bindBlacklist, v) and not secondaryBinds[v] then
-                    self.primaryInput = v
-                end
-            end
-    
-            if self.secondaryInput and not self.primaryInput then
-                self.secondaryInput = nil
-                return
-            else
-                setupBind(self)
+        end
 
-                if self.bindCallback then
-                    self.bindCallback({self.primaryInput, self.secondaryInput})
-                end
+        self._secondaryInput = nil
+        self._primaryInput = nil
+
+        for i,v in pairs(newBind) do
+            if secondaryBinds[v] then
+                self._secondaryInput = v
+            end
+
+            if not table.find(bindBlacklist, v) and not secondaryBinds[v] then
+                self._primaryInput = v
+            end
+        end
+
+        if self._secondaryInput and not self._primaryInput then
+            self._secondaryInput = nil
+            return
+        else
+            setupBind(self)
+
+            if self._bindCallback then
+                self._bindCallback({self._primaryInput, self._secondaryInput})
             end
         end
     end
 end
 
 function ToggleElement:GetKeybind()
-    if self.keybindGui then
-        return {self.primaryInput, self.secondaryInput}
+    if self._keybindGui then
+        return {self._primaryInput, self._secondaryInput}
     end
 end
 
@@ -422,48 +454,57 @@ local function round(number, decimalPlaces)
     return math.round(number * power) / power 
 end
 
-local function createSlider(self, callback)
+local function createSlider(self)
     local sliderConnections = {}
 
-    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
-    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
+    self._sliderGui.Frame.Size = UDim2.new((self._sliderValue - self._extrema[1]) / (self._extrema[2] - self._extrema[1]), 0, 1, 0)
+    self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
 
-    self.sliderGui.TextLabel.MouseButton1Down:Connect(function(X)
+    self._sliderGui.TextLabel.MouseButton1Down:Connect(function(X)
         for i,v in pairs(sliderConnections) do
             v:Disconnect()
             sliderConnections[i] = nil
         end
 
-        self.sliding = true
-        local previousSliderValue = self.sliderValue
-        self.sliderValue = round((X - self.sliderGui.Frame.AbsolutePosition.x) / self.sliderGui.TextLabel.AbsoluteSize.X * (self.extrema[2] - self.extrema[1]) + self.extrema[1], self.decimalPlaces)
-        
-        if self.sliderValue ~= previousSliderValue then
-            self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
-            self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
-            callback(self.sliderValue)
+        self._sliding = true
+        local previousSliderValue = self._sliderValue
+        self._sliderValue = round((X - self._sliderGui.Frame.AbsolutePosition.x) / self._sliderGui.TextLabel.AbsoluteSize.X * (self._extrema[2] - self._extrema[1]) + self._extrema[1], self._decimalPlaces)
+        if self._sliderValue ~= previousSliderValue then
+            self._sliderGui.Frame.Size = UDim2.new((self._sliderValue - self._extrema[1]) / (self._extrema[2] - self._extrema[1]), 0, 1, 0)
+            self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
+
+            if self._sliderFlagName then
+                self._flags[self._sliderFlagName] = self.default
+            end
+
+            self._sliderCallback(self._sliderValue)
         end
 
         sliderConnections[#sliderConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProccessed)
             if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-                local precentage = math.clamp((inputObject.Position.X - self.sliderGui.Frame.AbsolutePosition.X) / self.sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
-                local previousSliderValue = self.sliderValue
-                self.sliderValue = round(precentage * (self.extrema[2] - self.extrema[1]) + self.extrema[1], self.decimalPlaces)
+                local precentage = math.clamp((inputObject.Position.X - self._sliderGui.Frame.AbsolutePosition.X) / self._sliderGui.TextLabel.AbsoluteSize.X, 0, 1)
+                local previousSliderValue = self._sliderValue
+                self._sliderValue = round(precentage * (self._extrema[2] - self._extrema[1]) + self._extrema[1], self._decimalPlaces)
         
-                if previousSliderValue ~= self.sliderValue then
-                    self.sliderGui.Frame.Size = UDim2.new((self.sliderValue - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
-                    self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
-                    callback(self.sliderValue)
+                if previousSliderValue ~= self._sliderValue then
+                    self._sliderGui.Frame.Size = UDim2.new((self._sliderValue - self._extrema[1]) / (self._extrema[2] - self._extrema[1]), 0, 1, 0)
+                    self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
+
+                    if self._sliderFlagName then
+                        self._flags[self._sliderFlagName] = self.default
+                    end
+
+                    self._sliderCallback(self._sliderValue)
                 end
             end
         end)
 
         sliderConnections[#sliderConnections + 1] = UserInputService.InputEnded:Connect(function(inputObject, gameProccessed)
             if inputObject.UserInputType == Enum.UserInputType.MouseButton1 then
-                self.sliding = false
+                self._sliding = false
 
-                if not self.selected then
-                    self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+                if not self._selected then
+                    self._sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
                 end
 
                 for i,v in pairs(sliderConnections) do
@@ -474,10 +515,10 @@ local function createSlider(self, callback)
         end)
 
         sliderConnections[#sliderConnections + 1] = UserInputService.WindowFocusReleased:Connect(function()
-            self.sliding = false
+            self._sliding = false
 
-            if not self.selected then
-                self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+            if not self._selected then
+                self._sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
             end
 
             for i,v in pairs(sliderConnections) do
@@ -487,15 +528,15 @@ local function createSlider(self, callback)
         end)
     end)
 
-    self.sliderGui.TextLabel.MouseEnter:Connect(function()
-        self.selected = true
-        self.sliderGui.Border.ImageColor3 = Color3.fromRGB(255,255,255)
+    self._sliderGui.TextLabel.MouseEnter:Connect(function()
+        self._selected = true
+        self._sliderGui.Border.ImageColor3 = Color3.fromRGB(255,255,255)
     end)
 
-    self.sliderGui.TextLabel.MouseLeave:Connect(function()
-        self.selected = false
-        if not self.sliding then
-            self.sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
+    self._sliderGui.TextLabel.MouseLeave:Connect(function()
+        self._selected = false
+        if not self._sliding then
+            self._sliderGui.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
         end
     end)
 end
@@ -508,38 +549,53 @@ function ToggleElement:AddSlider(config)
         default = Number
         decimalPlaces = Number?
         callback = Function
+        flag = String?
+        callbackOnCreation = Boolean?
     ]]--
-    self.sliderGui = self.assets.SliderElement:Clone()
-    self.extrema = {config.minimum, config.maximum}
-    self.decimalPlaces = config.decimalPlaces or 0
-    self.sliderValue = round(config.default, self.decimalPlaces)
-    
-    self.sliderGui.Parent = self.toggleGui
-    self.toggleGui.Size = UDim2.new(1, 0, 0, 40)
-    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    self._sliderGui = self._assets.SliderElement:Clone()
+    self._extrema = {config.minimum, config.maximum}
+    self._decimalPlaces = config.decimalPlaces or 0
+    self._sliderCallback = config.callback
+    self._sliderValue = round(config.default, self._decimalPlaces)
+    self._sliderFlagName = config.flag
 
-    createSlider(self, function(value)
-        self.callback(self.boolean, value)
-    end)
+    self._sliderGui.Parent = self._toggleGui
+    self._toggleGui.Size = UDim2.new(1, 0, 0, 40)
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
+
+    createSlider(self)
+
+    if self._sliderFlagName then
+        self._flags[self._sliderFlagName] = config.default
+    end
+
+    if config.callbackOnCreation then
+        task.spawn(self._sliderCallback, config.default)
+    end
 
     return self
 end
 
 local function setSlider(self, number)
-    if self.sliderGui then
-        local number = round(math.clamp(number, self.extrema[1], self.extrema[2]), self.decimalPlaces)
+    local number = round(math.clamp(number, self._extrema[1], self._extrema[2]), self._decimalPlaces)
 
-        self.sliderGui.Frame.Size = UDim2.new((number - self.extrema[1]) / (self.extrema[2] - self.extrema[1]), 0, 1, 0)
-        self.sliderValue = number
-        self.sliderGui.TextLabel.Text = self.sliderValue..' / '..self.extrema[2]
-        self.callback(self.boolean, self.sliderValue)
-    end
+    self._sliderGui.Frame.Size = UDim2.new((number - self._extrema[1]) / (self._extrema[2] - self._extrema[1]), 0, 1, 0)
+    self._sliderValue = number
+    self._sliderGui.TextLabel.Text = self._sliderValue..' / '..self._extrema[2]
+    self._callback(self._boolean, self._sliderValue)
 end
 
 function ToggleElement:SetSlider(number)
-    task.spawn(setSlider, self, number)
+    if self._sliderGui and typeof(number) == "number" then
+        if self._sliderFlagName then
+            self._flags[self._sliderFlagName] = number
+        end
+
+        task.spawn(setSlider, self, number)
+    end
 end
+
 
 local SliderElement = {}
 SliderElement.__index = SliderElement
@@ -552,44 +608,68 @@ function SectionElement:CreateSlider(config)
         maximum = Number
         default = Number
         decimalPlaces = Number?
+        callback = Function
+        callbackOnCreation = Boolean?
+        flag = String?
     ]]--
-    local sliderGui = self.assets.Slider:Clone()
-    local sliderElement = self.assets.SliderElement:Clone()
+    local sliderGui = self._assets.Slider:Clone()
+    local sliderElement = self._assets.SliderElement:Clone()
 
-    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     sliderGui.TextLabel.Text = config.name
-    sliderGui.Parent = self.section.Frame.Holder
+    sliderGui.Parent = self._section.Frame.Holder
     SliderElement.Parent = sliderGui
 
-    local self = {}
+    local slider = {}
 
-    self.sliderGui = sliderElement
-    self.extrema = {config.minimum, config.maximum}
-    self.callback = config.callback
-    self.decimalPlaces = config.decimalPlaces or 0
+    slider._sliderGui = sliderElement
+    slider._extrema = {config.minimum, config.maximum}
+    slider._sliderCallback = config.callback
+    slider._decimalPlaces = config.decimalPlaces or 0
+    slider._flags = self._flags
+    slider._sliderFlagName = config.flag
+    slider._sliderValue = config.default
 
-    createSlider(self, config.callback)
+    createSlider(slider)
 
-    return setmetatable(self, SliderElement)
+    if slider._sliderFlagName then
+        slider._flags[slider._sliderFlagName] = config.default
+    end
+
+    if config.callbackOnCreation then
+        task.spawn(slider._callback, config.default)
+    end
+
+    return setmetatable(slider, SliderElement)
 end
 
 function SliderElement:Set(number)
-    task.spawn(setSlider, self, number)
+    if typeof(number) == "number" then
+        if self._flagName then
+            self._flags[self._flagName] = number
+        end
+    
+        task.spawn(setSlider, self, number)
+    end
+end
+
+function SliderElement:Get()
+    return self._value
 end
 
 function SectionElement:CreateButton(config)
     --[[
         config:
         name = String
-        callback = Function
+        callback = Functionz
     ]]
-    local button = self.assets.Button:Clone()
+    local button = self._assets.Button:Clone()
 
     button.ImageButton.Text = config.name
-    button.Parent = self.section.Frame.Holder
-    self.section.Size = UDim2.new(1, 0, 0, self.section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
-    self.scrollingFrame.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self.scrollingFrame, false).UIListLayout.AbsoluteContentSize.Y + 12)
+    button.Parent = self._section.Frame.Holder
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
 
     button.ImageButton.MouseButton1Down:Connect(function()
         button.ImageButton.TextColor3 = Color3.fromRGB(27, 27, 27)
@@ -608,7 +688,7 @@ function SectionElement:CreateButton(config)
 
     button.ImageButton.MouseLeave:Connect(function()
         button.ImageButton.TextColor3 = Color3.new(1, 1, 1)
-        button.ImageButton.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
+        button.ImageButton.BackgroundColor3 = Color3.fromRGB(27, 27, 27)    
         button.ImageButton.Border.ImageColor3 = Color3.fromRGB(41, 41, 41)
     end)
 end
@@ -643,19 +723,19 @@ local function RGBToHSV(color)
 		hue = 60 * ((r - g) * delta + 4)
 	end
 
-	return hue/360, saturation, value
+	return math.clamp(hue/360, 0, 1), math.clamp(saturation, 0, 1), math.clamp(value, 0, 1)
 end
 
 
 local function updateColorPicker(self)
-    local newColor = Color3.fromHSV(self.hue, self.saturation, self.value)
+    local newColor = Color3.fromHSV(self._hue, self._saturation, self._value)
 
-    self.button.ImageButton.BackgroundColor3 = newColor
+    self._button.ImageButton.BackgroundColor3 = newColor
     currentColorPicker.Frame.Button.PlaceholderText = math.round(newColor.R * 255)..', '..math.round(newColor.G * 255)..', '..math.round(newColor.B * 255)
-    currentColorPicker.Gradient.Cursor.Position = UDim2.new(self.saturation, 0, 1 - self.value, 0)
+    currentColorPicker.Gradient.Cursor.Position = UDim2.new(self._saturation, 0, 1 - self._value, 0)
     currentColorPicker.Gradient.UIGradient.Color = ColorSequence.new{
         ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
-        ColorSequenceKeypoint.new(1, Color3.fromHSV(self.hue, 1, 1))
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(self._hue, 1, 1))
     }
 end
 
@@ -665,21 +745,35 @@ function SectionElement:CreateColorPicker(config)
         name = String
         callback = Function
         default = Color3
+        flag = String?
+        callbackOnCreation = Boolean?
     ]]--
-    local button = self.assets.Toggle:Clone()
+    local button = self._assets.Toggle:Clone()
     button.ImageButton.BackgroundColor3 = config.default
     local h,s,v = RGBToHSV(config.default)
     local mouseLeave = false
     local colorPicker = {
-        callback = config.callback,
-        button = button,
-        hue = h,
-        saturation = s,
-        value = v
+        _callback = config.callback,
+        _button = button,
+        _hue = h,
+        _saturation = s,
+        _value = v,
+        _flags = self._flags,
+        _flagName = config.flag
     }
 
+    self._section.Size = UDim2.new(1, 0, 0, self._section.Frame.Holder.UIListLayout.AbsoluteContentSize.Y + 17)
+    self._scrollingframe.CanvasSize = UDim2.new(0, 0, 0, getShortestSide(self._scrollingframe, false).UIListLayout.AbsoluteContentSize.Y + 12)
     button.TextLabel.Text = config.name
-    button.Parent = self.section.Frame.Holder
+    button.Parent = self._section.Frame.Holder
+
+    if config.flag then
+        self._flags[config.flag] = config.default
+    end
+
+    if config.callbackOnCreation then
+        task.spawn(config.callback, config.default)
+    end
 
     button.ImageButton.MouseEnter:Connect(function()
         mouseLeave = false
@@ -727,44 +821,65 @@ function SectionElement:CreateColorPicker(config)
                     colorPickerConnections[i] = nil
                 end
             else
-                currentColorPicker = self.assets.ColorPicker:Clone()
-                currentColorPicker.Parent = self.gui
+                currentColorPicker = self._assets.ColorPicker:Clone()
+                currentColorPicker.Parent = self._gui
             end
     
             currentColorPickerButton = button
             updateColorPicker(colorPicker)
-            colorPicker.Visible = true
-    
+            
             colorPickerConnections[#colorPickerConnections + 1] = RunService.Heartbeat:Connect(function()
-                currentColorPicker.Position = UDim2.new(0, button.ImageButton.AbsolutePosition.X, 0, button.ImageButton.AbsolutePosition.Y + 75)
+                currentColorPicker.Position = UDim2.new(0, button.ImageButton.AbsolutePosition.X, 0, button.ImageButton.AbsolutePosition.Y + 65)
             end)
 
+            currentColorPicker.Visible = true
+
             colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Slider.MouseButton1Down:Connect(function(X, Y)
-                colorPicker.hue = (X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X
+                colorPicker._hue = (X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X
                 updateColorPicker(colorPicker)
-                self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                if colorPicker._flagName then
+                    colorPicker._flags[colorPicker._flagName] = Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value)
+                end
+
+                colorPicker._callback(Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value))
 
                 tempColorPickerConnections[#tempColorPickerConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProcessed)
                     if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-                        colorPicker.hue = math.clamp((inputObject.Position.X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X, 0, 1)
+                        colorPicker._hue = math.clamp((inputObject.Position.X - currentColorPicker.Slider.AbsolutePosition.X) / currentColorPicker.Slider.AbsoluteSize.X, 0, 1)
                         updateColorPicker(colorPicker)
-                        self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                        if colorPicker._flagName then
+                            colorPicker._flags[colorPicker._flagName] = Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value)
+                        end
+
+                        colorPicker._callback(Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value))
                     end
                 end)
             end)
 
             colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Gradient.TextButton.MouseButton1Down:Connect(function(X, Y)
-                colorPicker.saturation = (X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X
-                colorPicker.value = 1 - ((Y - 35) - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y
+                colorPicker._saturation = (X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X
+                colorPicker._value = 1 - ((Y - 35) - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y
                 updateColorPicker(colorPicker)
-                self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                if colorPicker._flagName then
+                    colorPicker._flags[colorPicker._flagName] = Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value)
+                end
+
+                colorPicker._callback(Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value))
 
                 tempColorPickerConnections[#tempColorPickerConnections + 1] = UserInputService.InputChanged:Connect(function(inputObject, gameProcessed)
                     if inputObject.UserInputType == Enum.UserInputType.MouseMovement then
-                        colorPicker.saturation = math.clamp((inputObject.Position.X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X, 0, 1)
-                        colorPicker.value = 1 - math.clamp((inputObject.Position.Y - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y, 0, 1)
+                        colorPicker._saturation = math.clamp((inputObject.Position.X - currentColorPicker.Gradient.TextButton.AbsolutePosition.X) / currentColorPicker.Gradient.TextButton.AbsoluteSize.X, 0, 1)
+                        colorPicker._value = 1 - math.clamp((inputObject.Position.Y - currentColorPicker.Gradient.TextButton.AbsolutePosition.Y) / currentColorPicker.Gradient.TextButton.AbsoluteSize.Y, 0, 1)
                         updateColorPicker(colorPicker)
-                        self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+
+                        if colorPicker._flagName then
+                            colorPicker._flags[colorPicker._flagName] = Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value)
+                        end
+
+                        colorPicker._callback(Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value))
                     end
                 end)
             end)
@@ -790,11 +905,11 @@ function SectionElement:CreateColorPicker(config)
                     local color = string.split(string.gsub(currentColorPicker.Frame.Button.Text, " ", ""), ",")
                     local h, s, v = RGBToHSV(Color3.fromRGB(color[1], color[2], color[3]))
 
-                    colorPicker.hue = h
-                    colorPicker.saturation = s
-                    colorPicker.value = v
+                    colorPicker._hue = h
+                    colorPicker._saturation = s
+                    colorPicker._value = v
                     updateColorPicker(colorPicker)
-                    self.callback(Color3.fromHSV(colorPicker.hue, colorPicker.saturation, colorPicker.value))
+                    colorPicker._callback(Color3.fromHSV(colorPicker._hue, colorPicker._saturation, colorPicker._value))
                 end
 
                 currentColorPicker.Frame.Button.Text = ""
@@ -808,11 +923,19 @@ end
 function ColorPickerElement:Set(color)
     local h, s, v = RGBToHSV(color)
 
-    self.hue = h
-    self.saturation = s
-    self.value = v
-    updateColorPicker(self)
-    task.spawn(self.callback, Color3.fromHSV(self.hue, self.saturation, self.value))
+    self._hue = h
+    self._saturation = s
+    self._value = v
+
+    if currentColorPickerButton == self._button then
+        updateColorPicker(self)
+    end
+
+    if self._flagName then
+        self._flags[self._flagName] = Color3.fromHSV(self._hue, self._saturation, self._value)
+    end
+
+    task.spawn(self._callback, Color3.fromHSV(self._hue, self._saturation, self._value))
 end
 
 return UiLibrary
