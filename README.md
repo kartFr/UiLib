@@ -60,8 +60,8 @@ Toggle:SetSlider(Number)
 #### Adding a Keybind
 ```lua
 Toggle:AddKeybind({
-  default: {Primary Bind, Secondary Bind}? -- this ui Lib introduces the ability to use 2 different buttons for a keybind
-  callback: Function?
+  default: {Primary Bind, Secondary Bind}? -- This Ui Library introduces the ability to use 2 different buttons for a keybind
+  callback: Function? -- Fires when the keybind is changed
 })
 ```
 ##### Setting a Keybind
