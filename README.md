@@ -22,11 +22,9 @@ local Section = Tab:CreateSection(name)
 ```
 
 ## Creating a Toggle
-<pre>
- <code class="Python">
+```lua
 local Section = Section:CreateToggle({
-name: <a href="https://github.com/gmarciani](https://create.roblox.com/docs/reference/engine/libraries/string">String</a>
+name: ```<a href="https://github.com/gmarciani](https://create.roblox.com/docs/reference/engine/libraries/string">String</a>```
 default: Boolean
 callback: Function
- </code>
-</pre>ws
+```
