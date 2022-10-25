@@ -22,12 +22,13 @@ local Section = Tab:CreateSection(name)
 ```
 
 ## Creating a Toggle
+*Note* Question Marks means the argument is optional
 ```lua
 local Section = Section:CreateToggle({
 name: String
 default: Boolean
 callback: Function
-callbackOnCreation: Boolean?
+callbackOnCreation: Boolean? -- to learn more about this and flags scroll to the bottom
 flag: String?
 })
 ```
