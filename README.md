@@ -24,9 +24,9 @@ local Section = Tab:CreateSection(name)
 ## Creating a Toggle
 <pre>
  <code>
-  local Section = Section:CreateToggle({
-  name: <a href="https://github.com/gmarciani](https://create.roblox.com/docs/reference/engine/libraries/string">String</a>
-  default: Boolean
-  callback: Function
+local Section = Section:CreateToggle({
+name: <a href="https://github.com/gmarciani](https://create.roblox.com/docs/reference/engine/libraries/string">String</a>
+default: Boolean
+callback: Function
  </code>
 </pre>ws
