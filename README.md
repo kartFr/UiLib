@@ -1,5 +1,5 @@
 # UiLibrary
-## (I got nothing else)
+A clean UiLibrary made with preformance and good UX in mind. (not debug-friendly *yet*)
 
 Getting the Library
 ```lua
