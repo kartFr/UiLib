@@ -29,3 +29,4 @@ local Section = Section:CreateToggle({
   callback: Function
 })
 ```
+[String](https://create.roblox.com/docs/reference/engine/libraries/string)
