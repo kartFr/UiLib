@@ -35,6 +35,7 @@ flag: String? -- to learn more about flags scroll to the bottom
 ### Toggle Functions
 
 ##### Setting the Toggle
+**Note* if you set anything it will fire the callback
 ```lua
 Toggle:Set(Boolean)
 ```
