@@ -39,15 +39,15 @@ function UiLibrary.new(name)
     local mainGui = assets.ScreenGui:Clone()
     local hiding = true
     local dragConnections = {}
-    mainGui.Parent = game.CoreGui
-    --[[if syn then
+
+    if syn then
         syn.protect_gui(mainGui)
         mainGui.Parent = game.CoreGui
     elseif gethui then
         mainGui.Parent = gethui()
     else
         mainGui.Parent = game.CoreGui
-    end]]--
+    end
 
     mainGui.Frame.TopBar.GuiName.Text = name
 
