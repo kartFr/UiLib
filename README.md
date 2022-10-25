@@ -22,7 +22,7 @@ local Section = Tab:CreateSection(name)
 ```
 
 ## Creating a Toggle
-*******Note* Question Marks means the argument is optional
+**Note* Question Marks means the argument is optional
 ```lua
 local Section = Section:CreateToggle({
 name: String
