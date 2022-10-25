@@ -724,7 +724,7 @@ local function RGBToHSV(color)
 		hue = 60 * ((r - g) * delta + 4)
 	end
 
-	return hue/360, saturation, value
+	return math.clamp(hue/360, 0, 1), math.clamp(saturation, 0, 1), math.clamp(value, 0, 1)
 end
 
 
