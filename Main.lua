@@ -340,6 +340,7 @@ function ToggleElement:AddKeybind(config)
     self._bindCallback = config.callback
     self._bindConnections = {}
     self._bindFlag = config.flag
+    local getInputs
 
     self._keybindGui.Button.MouseButton1Down:Connect(function()
         if #self._bindConnections >= 1 then
@@ -352,7 +353,6 @@ function ToggleElement:AddKeybind(config)
         self._keybindGui.Button.Text = '...'
         self._secondaryInput = nil
         self._primaryInput = nil
-        local getInputs
         
         getInputs = UserInputService.InputBegan:Connect(function(inputObject, gameProccessed)
             if not gameProccessed then
@@ -377,6 +377,9 @@ function ToggleElement:AddKeybind(config)
     end)
 
     self._keybindGui.Button.MouseButton2Down:Connect(function()
+        if getInputs then
+            getInputs:Disconnect()
+        end
         self._keybindGui.Button.Text = 'None'
         self._secondaryInput = nil
         self._primaryInput = nil
@@ -696,37 +699,6 @@ end
 local ColorPickerElement = {}
 ColorPickerElement.__index = ColorPickerElement
 
-local function RGBToHSV(color)
-	local r = color.R
-	local g = color.G
-	local b = color.B
-	local max = math.max(r, g, b)
-	local min = math.min(r, g, b)
-	local delta = max - min
-	local saturation
-	local hue
-	local value = max
-
-	if max == 0 then
-		saturation = 0
-	else
-		saturation = delta/max
-	end
-
-	if delta == 0 then
-		hue = 0
-	elseif max == r then
-		hue = 60 * ((g - b) * delta % 6) 
-	elseif max == g then
-		hue = 60 * ((b - r) / delta + 2) 
-	else
-		hue = 60 * ((r - g) * delta + 4)
-	end
-
-	return math.clamp(hue/360, 0, 1), math.clamp(saturation, 0, 1), math.clamp(value, 0, 1)
-end
-
-
 local function updateColorPicker(self)
     local newColor = Color3.fromHSV(self._hue, self._saturation, self._value)
 
@@ -750,7 +722,7 @@ function SectionElement:CreateColorPicker(config)
     ]]--
     local button = self._assets.Toggle:Clone()
     button.ImageButton.BackgroundColor3 = config.default
-    local h,s,v = RGBToHSV(config.default)
+    local h,s,v = config.default:ToHSV()
     local mouseLeave = false
     local colorPicker = {
         _callback = config.callback,
@@ -907,7 +879,7 @@ function SectionElement:CreateColorPicker(config)
             colorPickerConnections[#colorPickerConnections + 1] = currentColorPicker.Frame.Button.FocusLost:Connect(function(enterPressed, self)
                 if enterPressed then
                     local color = string.split(string.gsub(currentColorPicker.Frame.Button.Text, " ", ""), ",")
-                    local h, s, v = RGBToHSV(Color3.fromRGB(color[1], color[2], color[3]))
+                    local h, s, v = Color3.fromRGB(color[1], color[2], color[3]):ToHSV()
 
                     colorPicker._hue = h
                     colorPicker._saturation = s
@@ -925,21 +897,22 @@ function SectionElement:CreateColorPicker(config)
 end
 
 function ColorPickerElement:Set(color)
-    local h, s, v = RGBToHSV(color)
+    if typeof(color) == "Color3" then
+        local h, s, v = color:ToHSV()
+        self._hue = h
+        self._saturation = s
+        self._value = v
 
-    self._hue = h
-    self._saturation = s
-    self._value = v
+        if currentColorPickerButton == self._button then
+            updateColorPicker(self)
+        end
 
-    if currentColorPickerButton == self._button then
-        updateColorPicker(self)
+        if self._flagName then
+            self._flags[self._flagName] = Color3.fromHSV(self._hue, self._saturation, self._value)
+        end
+
+        task.spawn(self._callback, Color3.fromHSV(self._hue, self._saturation, self._value))
     end
-
-    if self._flagName then
-        self._flags[self._flagName] = Color3.fromHSV(self._hue, self._saturation, self._value)
-    end
-
-    task.spawn(self._callback, Color3.fromHSV(self._hue, self._saturation, self._value))
 end
 
 return UiLibrary
